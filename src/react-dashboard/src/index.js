@@ -27,7 +27,7 @@ ReactDOM.render(
             audience={config.audience}
             onRedirectCallback={onRedirectCallback}
         >
-            <Router>
+            <Router basename="/dashboard">
                 <App />
             </Router>
         </Auth0Provider>

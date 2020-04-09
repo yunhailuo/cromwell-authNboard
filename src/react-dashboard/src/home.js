@@ -45,7 +45,7 @@ const Home = () => {
             .then(res => res.statusText)
             .then(res => setEngineStatus(res))
             .catch(err => console.log(err));
-    }, [enginUrl]);
+    }, [authorizedFetch, enginUrl]);
     const [workflowSummary, setWorkflowSummary] = useState({});
     const queryUrl = `/api/workflows/${apiVersion}/query`;
     useEffect(() => {
@@ -63,11 +63,11 @@ const Home = () => {
                 setWorkflowSummary(summary);
             })
             .catch(err => console.log(err));
-    }, [queryUrl]);
+    }, [authorizedFetch, queryUrl]);
     const [apiToken, setApiToken] = useState();
     useEffect(() => {
         getTokenSilently().then(token => setApiToken(token));
-    }, []);
+    }, [getTokenSilently]);
 
 
     return (

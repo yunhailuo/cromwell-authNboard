@@ -6,14 +6,26 @@ from auth import requires_auth
 proxy = Blueprint('proxy', __name__,)
 
 
-@proxy.route('/<path:path>', methods=['GET', 'POST'])
+@proxy.route(
+    '/engine/<path:subpath>',
+    defaults={'prefix': 'engine'},
+    methods=['GET', 'POST']
+)
+@proxy.route(
+    '/api/<path:subpath>',
+    defaults={'prefix': 'api'},
+    methods=['GET', 'POST']
+)
 @requires_auth
-def get_post(path):
+def get_post(subpath, prefix):
+    path = '{}/{}'.format(
+        prefix, subpath.lstrip('/')
+    )
     response = requests.request(
         request.method,
         '{}/{}'.format(
             current_app.config['CROMWELL_SERVER'].rstrip('/'),
-            path.lstrip('/')
+            path
         ),
         params=request.args,
         stream=True,

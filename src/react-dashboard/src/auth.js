@@ -81,9 +81,8 @@ export const Auth0Provider = ({
         setUser(user);
     };
 
-    const authorizedFetch = async (resource, init={}) => {
+    const authorizedFetch = async (resource, init = {}) => {
         const token = await auth0Client.getTokenSilently();
-        console.log(token);
         init.headers = { Authorization: `Bearer ${token}` };
 
         return fetch(resource, init);

@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { useAuth0 } from "./auth";
 import { Link } from "react-router-dom";
+import history from "./history";
 import Main from "./main";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
@@ -130,7 +131,9 @@ function App() {
                         <Button
                             variant="contained"
                             color="secondary"
-                            onClick={() => logout({})}
+                            onClick={() => {
+                                logout({ returnTo: window.location.origin });
+                            }}
                         >
                             Log Out
                         </Button>
@@ -169,8 +172,9 @@ const SideBar = ({ open = false }) => {
             variant="permanent"
             classes={{
                 paper: clsx(
-                    classes.drawerPaper, !open && classes.drawerPaperClose
-                ),
+                    classes.drawerPaper,
+                    !open && classes.drawerPaperClose
+                )
             }}
             open={open}
         >

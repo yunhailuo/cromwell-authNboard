@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useAuth0 } from "./auth";
 import { Link } from "react-router-dom";
@@ -34,15 +34,15 @@ const workflowColumns = [
 export const WorkflowList = () => {
     const { apiVersion, authorizedFetch } = useAuth0();
     const classes = useStyles();
-    const [workflows, setWorkflows] = React.useState([]);
+    const [workflows, setWorkflows] = useState([]);
     const queryUrl = `/api/workflows/${apiVersion}/query`;
-    React.useEffect(() => {
+    useEffect(() => {
         authorizedFetch(queryUrl)
             .then(res => res.json())
             .then(res => setWorkflows(res.results))
             .catch(err => console.log(err));
-    }, [queryUrl]);
-    const [rowCount, setRowCount] = React.useState(5);
+    }, [authorizedFetch, queryUrl]);
+    const [rowCount, setRowCount] = useState(5);
     const addRows = () => setRowCount(rowCount + 5);
     const maxRows = () => setRowCount(workflows.length);
     const resetRows = () => setRowCount(5);
@@ -132,8 +132,8 @@ export const Workflow = ({
 }) => {
     const { apiVersion, authorizedFetch } = useAuth0();
     const workflowUrl = `/api/workflows/${apiVersion}/${uuid}`;
-    const [metadata, setMetadata] = React.useState("");
-    React.useEffect(() => {
+    const [metadata, setMetadata] = useState({});
+    useEffect(() => {
         authorizedFetch(workflowUrl + "/metadata")
             .then(res => res.json())
             .then(res => {
@@ -169,7 +169,7 @@ export const Workflow = ({
                 }
             })
             .catch(err => console.log(err));
-    }, [workflowUrl]);
+    }, [authorizedFetch, workflowUrl]);
     const basicMetadataFields = [
         "id",
         "workflowName",
