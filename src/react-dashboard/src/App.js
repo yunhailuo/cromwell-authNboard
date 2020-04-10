@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { useAuth0 } from "./auth";
 import { Link } from "react-router-dom";
-import history from "./history";
 import Main from "./main";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";

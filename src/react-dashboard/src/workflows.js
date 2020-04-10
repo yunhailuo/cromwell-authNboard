@@ -9,6 +9,7 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import Typography from "@material-ui/core/Typography";
+import Box from "@material-ui/core/Box";
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
@@ -63,7 +64,9 @@ export const WorkflowList = () => {
                         <TableHead>
                             <TableRow>
                                 {workflowColumns.map(col => (
-                                    <TableCell key={col}>{col}</TableCell>
+                                    <TableCell key={col}>
+                                        <strong>{col}</strong>
+                                    </TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
@@ -196,7 +199,10 @@ export const Workflow = ({
                 {basicMetadataFields.map(k =>
                     metadata[k] ? (
                         <ListItem key={k}>
-                            <ListItemText primary={`${k}: ${metadata[k]}`} />
+                            <ListItemText>
+                                <strong>{k}</strong>
+                                {`: ${metadata[k]}`}
+                            </ListItemText>
                         </ListItem>
                     ) : null
                 )}
@@ -205,13 +211,13 @@ export const Workflow = ({
             <Divider />
             {/* Execution time */}
             <Typography component="h4" variant="h6" color="secondary">
-                Execution time
+                <Box textAlign="left">Execution time</Box>
             </Typography>
             <div id="chart_div" />
             <Divider />
             {/* Labels */}
             <Typography component="h4" variant="h6" color="secondary">
-                Labels
+                <Box textAlign="left">Labels</Box>
             </Typography>
             <List dense>
                 {metadata.labels && Object.keys(metadata.labels).length > 0 ? (
@@ -219,9 +225,10 @@ export const Workflow = ({
                         .sort()
                         .map(k => (
                             <ListItem key={k}>
-                                <ListItemText
-                                    primary={`${k}: ${metadata.labels[k]}`}
-                                />
+                                <ListItemText>
+                                    <strong>{k}</strong>
+                                    {`: ${metadata.labels[k]}`}
+                                </ListItemText>
                             </ListItem>
                         ))
                 ) : (
@@ -233,7 +240,7 @@ export const Workflow = ({
             <Divider />
             {/* Inputs */}
             <Typography component="h4" variant="h6" color="secondary">
-                Inputs
+                <Box textAlign="left">Inputs</Box>
             </Typography>
             <List dense>
                 {metadata.inputs && Object.keys(metadata.inputs).length > 0 ? (
@@ -246,9 +253,10 @@ export const Workflow = ({
                         .sort()
                         .map(k => (
                             <ListItem key={k}>
-                                <ListItemText
-                                    primary={`${k}: ${metadata.inputs[k]}`}
-                                />
+                                <ListItemText>
+                                    <strong>{k}</strong>
+                                    {`: ${metadata.inputs[k]}`}
+                                </ListItemText>
                             </ListItem>
                         ))
                 ) : (
@@ -260,7 +268,7 @@ export const Workflow = ({
             <Divider />
             {/* Outputs */}
             <Typography component="h4" variant="h6" color="secondary">
-                Outputs
+                <Box textAlign="left">Outputs</Box>
             </Typography>
             <List dense>
                 {metadata.outputs && Object.keys(metadata.outputs).length > 0 ? (
@@ -268,9 +276,10 @@ export const Workflow = ({
                         .sort()
                         .map(k => (
                             <ListItem key={k}>
-                                <ListItemText
-                                    primary={`${k}: ${metadata.outputs[k]}`}
-                                />
+                                <ListItemText>
+                                    <strong>{k}</strong>
+                                    {`: ${metadata.outputs[k]}`}
+                                </ListItemText>
                             </ListItem>
                         ))
                 ) : (
