@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import PropTypes from "prop-types";
-import { useAuth0 } from "./auth";
+import React, { useState, useEffect } from "react";
+import { UserTile, useAuth0 } from "./auth";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -10,13 +9,6 @@ import Typography from "@material-ui/core/Typography";
 import List from "@material-ui/core/List";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
-import Button from "@material-ui/core/Button";
-import Box from "@material-ui/core/Box";
-import Avatar from "@material-ui/core/Avatar";
-import Dialog from "@material-ui/core/Dialog";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogActions from "@material-ui/core/DialogActions";
 
 const useStyles = makeStyles(theme => ({
     container: {
@@ -39,11 +31,8 @@ const useStyles = makeStyles(theme => ({
 
 const Home = () => {
     const {
-        loading,
-        user,
         apiVersion,
         authorizedFetch,
-        getTokenSilently
     } = useAuth0();
 
     const classes = useStyles();
@@ -75,10 +64,6 @@ const Home = () => {
             })
             .catch(err => console.log(err));
     }, [authorizedFetch, queryUrl]);
-    const [apiToken, setApiToken] = useState();
-    useEffect(() => {
-        getTokenSilently().then(token => setApiToken(token));
-    }, [getTokenSilently]);
 
     return (
         <React.Fragment>
@@ -124,44 +109,7 @@ const Home = () => {
                             </List>
                         </Paper>
                     </Grid>
-                    {!loading && user ? (
-                        <Grid item xs={12} md={4} lg={3}>
-                            <Paper className={fixedHeightPaper}>
-                                <Box
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                >
-                                    <Avatar src={user.picture} />
-                                </Box>
-                                <List dense>
-                                    {user.name !== user.email ? (
-                                        <ListItem>
-                                            <ListItemText>
-                                                <strong>Name</strong>
-                                                {`: ${user.name}`}
-                                            </ListItemText>
-                                        </ListItem>
-                                    ) : null}
-                                    <ListItem>
-                                        <ListItemText>
-                                            <strong>Email</strong>
-                                            {`: ${user.email}`}
-                                        </ListItemText>
-                                    </ListItem>
-                                    {apiToken ? (
-                                        <ListItem>
-                                            <Box m="auto">
-                                                <TokenMsgBox token={apiToken} />
-                                            </Box>
-                                        </ListItem>
-                                    ) : (
-                                        <ListItemText primary="No API Token available." />
-                                    )}
-                                </List>
-                            </Paper>
-                        </Grid>
-                    ) : null}
+                    <UserTile />
                 </Grid>
             </Container>
         </React.Fragment>
@@ -169,62 +117,3 @@ const Home = () => {
 };
 
 export default Home;
-
-const TokenMsgBox = ({ token }) => {
-    const classes = useStyles();
-    const [open, setOpen] = React.useState(false);
-
-    const handleClickOpen = () => {
-        setOpen(true);
-    };
-    const tokenRef = useRef(null);
-    const handleCopyClose = () => {
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(tokenRef.current);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        document.execCommand("copy");
-        setOpen(false);
-    };
-    const handleClose = () => {
-        setOpen(false);
-    };
-
-    return (
-        <React.Fragment>
-            <Button
-                variant="outlined"
-                color="primary"
-                onClick={handleClickOpen}
-            >
-                Get API Token
-            </Button>
-            <Dialog
-                onClose={handleClose}
-                aria-labelledby="token-dialog-title"
-                open={open}
-            >
-                <DialogTitle id="token-dialog-title" onClose={handleClose}>
-                    API Bearer Token
-                </DialogTitle>
-                <DialogContent dividers>
-                    <Typography className={classes.tokenArea} ref={tokenRef}>
-                        {token}
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button autoFocus onClick={handleCopyClose} color="primary">
-                        Copy and Close
-                    </Button>
-                    <Button autoFocus onClick={handleClose} color="primary">
-                        Close
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </React.Fragment>
-    );
-};
-TokenMsgBox.propTypes = {
-    token: PropTypes.string.isRequired
-};

@@ -1,8 +1,23 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import PropTypes from "prop-types";
 import createAuth0Client from "@auth0/auth0-spa-js";
+import config from "./auth_config.json";
 import { Route, Redirect } from "react-router-dom";
+import clsx from "clsx";
+import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
+import Grid from "@material-ui/core/Grid";
+import Paper from "@material-ui/core/Paper";
+import Typography from "@material-ui/core/Typography";
+import List from "@material-ui/core/List";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemText from "@material-ui/core/ListItemText";
+import Box from "@material-ui/core/Box";
+import Avatar from "@material-ui/core/Avatar";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
 
 const DEFAULT_REDIRECT_CALLBACK = () =>
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -81,8 +96,17 @@ export const Auth0Provider = ({
         setUser(user);
     };
 
+    // In case a consent is required, pop up is necessary.
+    const getToken = (...p) =>
+        auth0Client
+            .getTokenSilently(...p)
+            .then(res => res, () => auth0Client.getTokenWithPopup(...p));
+
     const authorizedFetch = async (resource, init = {}) => {
-        const token = await auth0Client.getTokenSilently();
+        const token = await getToken({
+            scope: "read:workflows",
+            audience: config.audience
+        });
         init.headers = { Authorization: `Bearer ${token}` };
 
         return fetch(resource, init);
@@ -98,12 +122,10 @@ export const Auth0Provider = ({
                 loginWithPopup,
                 handleRedirectCallback,
                 authorizedFetch,
+                getToken,
                 getIdTokenClaims: (...p) => auth0Client.getIdTokenClaims(...p),
                 loginWithRedirect: (...p) =>
                     auth0Client.loginWithRedirect(...p),
-                getTokenSilently: (...p) => auth0Client.getTokenSilently(...p),
-                getTokenWithPopup: (...p) =>
-                    auth0Client.getTokenWithPopup(...p),
                 logout: (...p) => auth0Client.logout(...p)
             }}
         >
@@ -175,4 +197,134 @@ export const Login = () => {
             Log In
         </Button>
     );
+};
+
+const useStyles = makeStyles(theme => ({
+    paper: {
+        padding: theme.spacing(2),
+        display: "flex",
+        overflow: "auto",
+        flexDirection: "column"
+    },
+    fixedHeight: {
+        height: 240
+    },
+    tokenArea: {
+        "word-break": "break-all"
+    }
+}));
+
+export const UserTile = () => {
+    const { loading, user, getToken } = useAuth0();
+    const [apiToken, setApiToken] = useState();
+    useEffect(() => {
+        getToken({
+            scope: "read:workflows",
+            audience: config.audience
+        }).then(res => setApiToken(res), err => console.error(err));
+    }, [getToken]);
+    const classes = useStyles();
+    const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
+
+    return (
+        <React.Fragment>
+            {!loading && user ? (
+                <Grid item xs={12} md={4} lg={3}>
+                    <Paper className={fixedHeightPaper}>
+                        <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                        >
+                            <Avatar src={user.picture} />
+                        </Box>
+                        <List dense>
+                            {user.name !== user.email ? (
+                                <ListItem>
+                                    <ListItemText>
+                                        <strong>Name</strong>
+                                        {`: ${user.name}`}
+                                    </ListItemText>
+                                </ListItem>
+                            ) : null}
+                            <ListItem>
+                                <ListItemText>
+                                    <strong>Email</strong>
+                                    {`: ${user.email}`}
+                                </ListItemText>
+                            </ListItem>
+                            {apiToken ? (
+                                <ListItem>
+                                    <Box m="auto">
+                                        <TokenMsgBox token={apiToken} />
+                                    </Box>
+                                </ListItem>
+                            ) : (
+                                <ListItemText primary="No API Token available." />
+                            )}
+                        </List>
+                    </Paper>
+                </Grid>
+            ) : null}
+        </React.Fragment>
+    );
+};
+
+const TokenMsgBox = ({ token }) => {
+    const classes = useStyles();
+    const [open, setOpen] = React.useState(false);
+
+    const handleClickOpen = () => {
+        setOpen(true);
+    };
+    const tokenRef = useRef(null);
+    const handleCopyClose = () => {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(tokenRef.current);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand("copy");
+        setOpen(false);
+    };
+    const handleClose = () => {
+        setOpen(false);
+    };
+
+    return (
+        <React.Fragment>
+            <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleClickOpen}
+            >
+                Get API Token
+            </Button>
+            <Dialog
+                onClose={handleClose}
+                aria-labelledby="token-dialog-title"
+                open={open}
+            >
+                <DialogTitle id="token-dialog-title" onClose={handleClose}>
+                    API Bearer Token
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Typography className={classes.tokenArea} ref={tokenRef}>
+                        {token}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button autoFocus onClick={handleCopyClose} color="primary">
+                        Copy and Close
+                    </Button>
+                    <Button autoFocus onClick={handleClose} color="primary">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </React.Fragment>
+    );
+};
+TokenMsgBox.propTypes = {
+    token: PropTypes.string.isRequired
 };

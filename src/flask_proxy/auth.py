@@ -1,7 +1,13 @@
 from functools import wraps
 
+from authlib.jose import JsonWebToken
+from authlib.jose.errors import (
+    MissingClaimError,
+    InvalidClaimError,
+    ExpiredTokenError,
+    InvalidTokenError,
+)
 from flask import current_app, request, jsonify, _request_ctx_stack
-from jose import jwt
 import requests
 
 
@@ -18,7 +24,7 @@ def handle_auth_error(ex):
     return response
 
 
-def get_token_auth_header():
+def get_token_from_header():
     """Obtains the Access Token from the Authorization Header
     """
     auth = request.headers.get("Authorization", None)
@@ -58,87 +64,75 @@ def get_token_auth_header():
     return token
 
 
-def requires_auth(f):
+def requires_auth(func):
     """Determines if the Access Token is valid
     """
-    @wraps(f)
+    @wraps(func)
     def decorated(*args, **kwargs):
-        token = get_token_auth_header()
+        token = get_token_from_header()
         jwks = requests.get(
             "https://{}/.well-known/jwks.json".format(
                 current_app.config["AUTH0_DOMAIN"]
             )
         ).json()
-        unverified_header = jwt.get_unverified_header(token)
-        rsa_key = {}
-        for key in jwks["keys"]:
-            if key["kid"] == unverified_header["kid"]:
-                rsa_key = {
-                    "kty": key["kty"],
-                    "kid": key["kid"],
-                    "use": key["use"],
-                    "n": key["n"],
-                    "e": key["e"]
+
+        def load_key(header, payload):
+            kid = header['kid']
+            for key in jwks["keys"]:
+                if key["kid"] == kid:
+                    return key
+            raise AuthError(
+                {
+                    "code": "invalid_header",
+                    "description": "Unable to find appropriate key"
+                },
+                401
+            )
+
+        jwt = JsonWebToken(current_app.config['ALGORITHMS'])
+        try:
+            payload = jwt.decode(
+                token,
+                load_key,
+                claims_options={
+                    "iss": {
+                        "essential": True,
+                        "value": "https://{}/".format(
+                            current_app.config["AUTH0_DOMAIN"]
+                        )
+                    },
+                    "aud": {
+                        "essential": True,
+                        "value": current_app.config["API_AUDIENCE"]
+                    }
                 }
-        if rsa_key:
-            try:
-                payload = jwt.decode(
-                    token,
-                    rsa_key,
-                    algorithms=current_app.config["ALGORITHMS"],
-                    audience=current_app.config["API_AUDIENCE"],
-                    issuer="https://{}/".format(
-                        current_app.config["AUTH0_DOMAIN"]
-                    )
-                )
-            except jwt.ExpiredSignatureError:
-                raise AuthError(
-                    {
-                        "code": "token_expired",
-                        "description": "token is expired"
-                    },
-                    401
-                )
-            except jwt.JWTClaimsError:
-                raise AuthError(
-                    {
-                        "code": "invalid_claims",
-                        "description": "incorrect claims, "
-                        "please check the audience and issuer"
-                    },
-                    401
-                )
-            except Exception:
-                raise AuthError(
-                    {
-                        "code": "invalid_header",
-                        "description": "Unable to parse authentication token."
-                    },
-                    401
-                )
+            )
+        except (
+            MissingClaimError,
+            InvalidClaimError,
+            ExpiredTokenError,
+            InvalidTokenError
+        ) as e:
+            raise AuthError(
+                {"code": e.error, "description": e.description}, 401
+            )
+        except Exception:
+            raise AuthError(
+                {
+                    "code": "invalid_header",
+                    "description": "Unable to decode authentication token."
+                },
+                401
+            )
+        if 'read:workflows' not in payload['scope']:
+            raise AuthError(
+                {
+                    "code": "missing_permission",
+                    "description": "missing read permission"
+                },
+                401
+            )
+        _request_ctx_stack.top.current_user = payload
+        return func(*args, **kwargs)
 
-            _request_ctx_stack.top.current_user = payload
-            return f(*args, **kwargs)
-        raise AuthError(
-            {
-                "code": "invalid_header",
-                "description": "Unable to find appropriate key"
-            },
-            401
-        )
     return decorated
-
-
-def requires_scope(required_scope):
-    """Determines if the required scope is present in the Access Token
-    Args:
-        required_scope (str): The scope required to access the resource
-    """
-    token = get_token_auth_header()
-    unverified_claims = jwt.get_unverified_claims(token)
-    if unverified_claims.get("scope"):
-        token_scopes = unverified_claims["scope"].split()
-        for token_scope in token_scopes:
-            if token_scope == required_scope:
-                return True
-    return False
