@@ -24,8 +24,7 @@ const INIT_OPTION = {
     domain: config.AUTH0_DOMAIN,
     client_id: config.CLIENT_ID,
     redirect_uri: window.location.origin,
-    audience: config.API_AUDIENCE,
-    scope: config.API_SCOPE
+    audience: config.API_AUDIENCE
 };
 
 const Auth0Context = React.createContext();

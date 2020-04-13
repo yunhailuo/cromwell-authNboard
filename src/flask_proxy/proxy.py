@@ -6,26 +6,32 @@ from auth import requires_auth
 proxy = Blueprint('proxy', __name__,)
 
 
-@proxy.route(
-    '/engine/<path:subpath>',
-    defaults={'prefix': 'engine'},
-    methods=['GET', 'POST']
+@proxy.route('/engine/<path:subpath>', methods=['GET'])
+@requires_auth(permissions=['read:workflows'])
+def engine_get(subpath):
+    return proxy_request('engine/{}'.format(subpath.lstrip('/')))
+
+
+@proxy.route('/api/<path:subpath>', methods=['GET'])
+@requires_auth(permissions=['read:workflows'])
+def api_get(subpath):
+    return proxy_request('api/{}'.format(subpath.lstrip('/')))
+
+
+@proxy.route('/api/<path:subpath>', methods=['POST'])
+@requires_auth(
+    permissions=['read:workflows', 'create:workflows', 'update:workflows']
 )
-@proxy.route(
-    '/api/<path:subpath>',
-    defaults={'prefix': 'api'},
-    methods=['GET', 'POST']
-)
-@requires_auth
-def get_post(subpath, prefix):
-    path = '{}/{}'.format(
-        prefix, subpath.lstrip('/')
-    )
+def api_post(subpath):
+    return proxy_request('api/{}'.format(subpath.lstrip('/')))
+
+
+def proxy_request(path):
     response = requests.request(
         request.method,
         '{}/{}'.format(
             current_app.config['CROMWELL_SERVER'].rstrip('/'),
-            path
+            path.lstrip('/')
         ),
         params=request.args,
         stream=True,

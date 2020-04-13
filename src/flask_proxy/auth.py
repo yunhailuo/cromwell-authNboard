@@ -10,6 +10,8 @@ from authlib.jose.errors import (
 from flask import current_app, request, jsonify, _request_ctx_stack
 import requests
 
+from utils import decorator
+
 
 # Error handler
 class AuthError(Exception):
@@ -64,7 +66,8 @@ def get_token_from_header():
     return token
 
 
-def requires_auth(func):
+@decorator
+def requires_auth(func, permissions=[]):
     """Determines if the Access Token is valid
     """
     @wraps(func)
@@ -124,15 +127,17 @@ def requires_auth(func):
                 },
                 401
             )
-        if 'read:workflows' not in payload['scope']:
-            raise AuthError(
-                {
-                    "code": "missing_permission",
-                    "description": "missing read permission"
-                },
-                401
-            )
-        _request_ctx_stack.top.current_user = payload
-        return func(*args, **kwargs)
+        if set(permissions) & set(payload.get('permissions', [])):
+            _request_ctx_stack.top.current_user = payload
+            return func(*args, **kwargs)
+        raise AuthError(
+            {
+                "code": "missing_permission",
+                "description": "missing {} permission".format(
+                    ', '.join(set(permissions))
+                )
+            },
+            401
+        )
 
     return decorated
