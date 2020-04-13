@@ -1,5 +1,5 @@
 import "./App.css";
-import React, { useState } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useAuth0 } from "./auth";
 import { Link } from "react-router-dom";
@@ -85,8 +85,17 @@ const useStyles = makeStyles(theme => ({
     }
 }));
 
-function App() {
-    const { loading, isAuthenticated, loginWithRedirect, logout } = useAuth0();
+const ApiContext = React.createContext({ apiVersion: "v1" });
+export const useApi = () => useContext(ApiContext);
+
+export const App = () => {
+    const {
+        loading,
+        isAuthenticated,
+        loginWithRedirect,
+        logout,
+        authorizedFetch
+    } = useAuth0();
     const classes = useStyles();
     const [open, setOpen] = useState(false);
     const handleDrawerOpen = () => {
@@ -96,71 +105,83 @@ function App() {
         setOpen(false);
     };
 
+    const [apiVersion, setApiVersion] = useState("v1");
+    useEffect(() => {
+        if (isAuthenticated) {
+            authorizedFetch("/engine/v1/version")
+                .then(res => res.json())
+                .then(version => setApiVersion(`v${version.cromwell || "1"}`));
+        }
+    }, [isAuthenticated, authorizedFetch]);
+
     if (loading) {
         return <div>Loading...</div>;
     }
     return (
-        <div className={`App ${classes.root}`}>
-            <CssBaseline />
-            <AppBar position="absolute" className={classes.appBar}>
-                <Toolbar className={classes.toolbar}>
-                    {isAuthenticated ? (
-                        <IconButton
-                            edge="start"
+        <ApiContext.Provider value={{ apiVersion }}>
+            <div className={`App ${classes.root}`}>
+                <CssBaseline />
+                <AppBar position="absolute" className={classes.appBar}>
+                    <Toolbar className={classes.toolbar}>
+                        {isAuthenticated ? (
+                            <IconButton
+                                edge="start"
+                                color="inherit"
+                                aria-label="open drawer"
+                                onClick={
+                                    open ? handleDrawerClose : handleDrawerOpen
+                                }
+                                className={classes.menuButton}
+                            >
+                                {open ? <ChevronLeftIcon /> : <MenuIcon />}
+                            </IconButton>
+                        ) : null}
+                        <Typography
+                            component="h1"
+                            variant="h6"
                             color="inherit"
-                            aria-label="open drawer"
-                            onClick={
-                                open ? handleDrawerClose : handleDrawerOpen
-                            }
-                            className={classes.menuButton}
+                            noWrap
+                            className={classes.title}
                         >
-                            {open ? <ChevronLeftIcon /> : <MenuIcon />}
-                        </IconButton>
-                    ) : null}
-                    <Typography
-                        component="h1"
-                        variant="h6"
-                        color="inherit"
-                        noWrap
-                        className={classes.title}
-                    >
-                        Cromwell Dashboard
-                    </Typography>
-                    {isAuthenticated ? (
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            onClick={() => {
-                                logout({ returnTo: window.location.origin });
-                            }}
-                        >
-                            Log Out
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="contained"
-                            onClick={() => loginWithRedirect({})}
-                        >
-                            Log In
-                        </Button>
-                    )}
-                </Toolbar>
-            </AppBar>
-            <SideBar open={open} />
-            <main className={classes.content}>
-                <div className={classes.appBarSpacer} />
-                <Container maxWidth="lg" className={classes.container}>
-                    <Main />
-                </Container>
-            </main>
-        </div>
+                            Cromwell Dashboard
+                        </Typography>
+                        {isAuthenticated ? (
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                onClick={() => {
+                                    logout({
+                                        returnTo: window.location.origin
+                                    });
+                                }}
+                            >
+                                Log Out
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="contained"
+                                onClick={() => loginWithRedirect({})}
+                            >
+                                Log In
+                            </Button>
+                        )}
+                    </Toolbar>
+                </AppBar>
+                <SideBar open={open} />
+                <main className={classes.content}>
+                    <div className={classes.appBarSpacer} />
+                    <Container maxWidth="lg" className={classes.container}>
+                        <Main />
+                    </Container>
+                </main>
+            </div>
+        </ApiContext.Provider>
     );
-}
-
-export default App;
+};
 
 const SideBar = ({ open = false }) => {
-    const { isAuthenticated, apiVersion } = useAuth0();
+    const { isAuthenticated } = useAuth0();
+    const { apiVersion } = useApi();
     const classes = useStyles();
 
     if (!isAuthenticated) {

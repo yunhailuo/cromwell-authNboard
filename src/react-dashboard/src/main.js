@@ -1,12 +1,13 @@
 import React from "react";
 import { Switch, Route } from "react-router-dom";
 import Typography from "@material-ui/core/Typography";
-import { Login, PrivateRoute, useAuth0 } from "./auth";
+import { Login, PrivateRoute } from "./auth";
+import { useApi } from "./App";
 import Home from "./home";
 import { WorkflowList, Workflow } from "./workflows";
 
 const Main = () => {
-    const { apiVersion } = useAuth0();
+    const { apiVersion } = useApi();
 
     return (
         <React.Fragment>
@@ -18,9 +19,7 @@ const Main = () => {
                 </Route>
                 <PrivateRoute
                     path={`/workflows/${apiVersion}/:uuid([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`}
-                    render={props => (
-                        <Workflow {...props} />
-                    )}
+                    render={props => <Workflow {...props} />}
                 />
                 <PrivateRoute path={`/workflows/${apiVersion}/query`}>
                     <WorkflowList />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { UserTile, useAuth0 } from "./auth";
+import { useApi } from "./App";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -30,10 +31,8 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Home = () => {
-    const {
-        apiVersion,
-        authorizedFetch,
-    } = useAuth0();
+    const { authorizedFetch } = useAuth0();
+    const { apiVersion } = useApi();
 
     const classes = useStyles();
     const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useAuth0 } from "./auth";
+import { useApi } from "./App";
 import { Link } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
@@ -33,7 +34,8 @@ const workflowColumns = [
 ];
 
 export const WorkflowList = () => {
-    const { apiVersion, authorizedFetch } = useAuth0();
+    const { authorizedFetch } = useAuth0();
+    const { apiVersion } = useApi();
     const classes = useStyles();
     const [workflows, setWorkflows] = useState([]);
     const queryUrl = `/api/workflows/${apiVersion}/query`;
@@ -133,7 +135,8 @@ export const Workflow = ({
         params: { uuid }
     }
 }) => {
-    const { apiVersion, authorizedFetch } = useAuth0();
+    const { authorizedFetch } = useAuth0();
+    const { apiVersion } = useApi();
     const workflowUrl = `/api/workflows/${apiVersion}/${uuid}`;
     const [metadata, setMetadata] = useState({});
     useEffect(() => {

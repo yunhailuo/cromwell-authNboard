@@ -1,5 +1,5 @@
 # configuration
-/src/auth_config.json
+/src/dashboard_config.json
 
 # dependencies
 /node_modules

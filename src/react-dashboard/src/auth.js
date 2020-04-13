@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import PropTypes from "prop-types";
 import createAuth0Client from "@auth0/auth0-spa-js";
-import config from "./auth_config.json";
+import config from "./dashboard_config.json";
+import history from "./history";
 import { Route, Redirect } from "react-router-dom";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
@@ -19,26 +20,26 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogActions from "@material-ui/core/DialogActions";
 
-const DEFAULT_REDIRECT_CALLBACK = () =>
-    window.history.replaceState({}, document.title, window.location.pathname);
+const INIT_OPTION = {
+    domain: config.AUTH0_DOMAIN,
+    client_id: config.CLIENT_ID,
+    redirect_uri: window.location.origin,
+    audience: config.API_AUDIENCE,
+    scope: config.API_SCOPE
+};
 
 const Auth0Context = React.createContext();
 export const useAuth0 = () => useContext(Auth0Context);
-export const Auth0Provider = ({
-    children,
-    onRedirectCallback = DEFAULT_REDIRECT_CALLBACK,
-    ...initOptions
-}) => {
+export const Auth0Provider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState();
     const [user, setUser] = useState();
     const [auth0Client, setAuth0] = useState();
     const [loading, setLoading] = useState(true);
     const [popupOpen, setPopupOpen] = useState(false);
-    const [apiVersion, setApiVersion] = useState("v1");
 
     useEffect(() => {
         const initAuth0 = async () => {
-            const auth0FromHook = await createAuth0Client(initOptions);
+            const auth0FromHook = await createAuth0Client(INIT_OPTION);
             setAuth0(auth0FromHook);
 
             if (
@@ -48,7 +49,11 @@ export const Auth0Provider = ({
                 const {
                     appState
                 } = await auth0FromHook.handleRedirectCallback();
-                onRedirectCallback(appState);
+                history.push(
+                    appState && appState.targetUrl
+                        ? appState.targetUrl
+                        : window.location.pathname
+                );
             }
 
             const isAuthenticated = await auth0FromHook.isAuthenticated();
@@ -58,14 +63,6 @@ export const Auth0Provider = ({
             if (isAuthenticated) {
                 const user = await auth0FromHook.getUser();
                 setUser(user);
-                const token = await auth0FromHook.getTokenSilently();
-                let versionRes = await fetch("/engine/v1/version", {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
-                let version = await versionRes.json();
-                setApiVersion(`v${version.cromwell || "1"}`);
             }
 
             setLoading(false);
@@ -103,10 +100,7 @@ export const Auth0Provider = ({
             .then(res => res, () => auth0Client.getTokenWithPopup(...p));
 
     const authorizedFetch = async (resource, init = {}) => {
-        const token = await getToken({
-            scope: "read:workflows",
-            audience: config.audience
-        });
+        const token = await getToken();
         init.headers = { Authorization: `Bearer ${token}` };
 
         return fetch(resource, init);
@@ -116,7 +110,6 @@ export const Auth0Provider = ({
             value={{
                 isAuthenticated,
                 user,
-                apiVersion,
                 loading,
                 popupOpen,
                 loginWithPopup,
@@ -134,8 +127,7 @@ export const Auth0Provider = ({
     );
 };
 Auth0Provider.propTypes = {
-    children: PropTypes.element.isRequired,
-    onRedirectCallback: PropTypes.func
+    children: PropTypes.element.isRequired
 };
 
 // A wrapper for <Route> that redirects to the login screen
@@ -215,14 +207,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 export const UserTile = () => {
-    const { loading, user, getToken } = useAuth0();
-    const [apiToken, setApiToken] = useState();
-    useEffect(() => {
-        getToken({
-            scope: "read:workflows",
-            audience: config.audience
-        }).then(res => setApiToken(res), err => console.error(err));
-    }, [getToken]);
+    const { loading, user } = useAuth0();
     const classes = useStyles();
     const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
 
@@ -253,15 +238,11 @@ export const UserTile = () => {
                                     {`: ${user.email}`}
                                 </ListItemText>
                             </ListItem>
-                            {apiToken ? (
-                                <ListItem>
-                                    <Box m="auto">
-                                        <TokenMsgBox token={apiToken} />
-                                    </Box>
-                                </ListItem>
-                            ) : (
-                                <ListItemText primary="No API Token available." />
-                            )}
+                            <ListItem>
+                                <Box m="auto">
+                                    <GetApiToken />
+                                </Box>
+                            </ListItem>
                         </List>
                     </Paper>
                 </Grid>
@@ -270,11 +251,14 @@ export const UserTile = () => {
     );
 };
 
-const TokenMsgBox = ({ token }) => {
+const GetApiToken = () => {
     const classes = useStyles();
     const [open, setOpen] = React.useState(false);
+    const [apiToken, setApiToken] = useState();
+    const { getToken } = useAuth0();
 
     const handleClickOpen = () => {
+        getToken().then(res => setApiToken(res), err => console.error(err));
         setOpen(true);
     };
     const tokenRef = useRef(null);
@@ -309,14 +293,27 @@ const TokenMsgBox = ({ token }) => {
                     API Bearer Token
                 </DialogTitle>
                 <DialogContent dividers>
-                    <Typography className={classes.tokenArea} ref={tokenRef}>
-                        {token}
-                    </Typography>
+                    {apiToken ? (
+                        <Typography
+                            className={classes.tokenArea}
+                            ref={tokenRef}
+                        >
+                            {apiToken}
+                        </Typography>
+                    ) : (
+                        <Typography>Requesting token from auth0 ...</Typography>
+                    )}
                 </DialogContent>
                 <DialogActions>
-                    <Button autoFocus onClick={handleCopyClose} color="primary">
-                        Copy and Close
-                    </Button>
+                    {apiToken ? (
+                        <Button
+                            autoFocus
+                            onClick={handleCopyClose}
+                            color="primary"
+                        >
+                            Copy and Close
+                        </Button>
+                    ) : null}
                     <Button autoFocus onClick={handleClose} color="primary">
                         Close
                     </Button>
@@ -324,7 +321,4 @@ const TokenMsgBox = ({ token }) => {
             </Dialog>
         </React.Fragment>
     );
-};
-TokenMsgBox.propTypes = {
-    token: PropTypes.string.isRequired
 };
