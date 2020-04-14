@@ -127,7 +127,10 @@ def requires_auth(func, permissions=[]):
                 },
                 401
             )
-        if set(permissions) & set(payload.get('permissions', [])):
+        if (
+            not permissions
+            or (set(permissions) & set(payload.get('permissions', [])))
+        ):
             _request_ctx_stack.top.current_user = payload
             return func(*args, **kwargs)
         raise AuthError(

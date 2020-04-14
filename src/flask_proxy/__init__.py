@@ -21,9 +21,9 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     @app.route('/')
-    @app.route('/dashboard')
-    @app.route('/dashboard/')
-    @app.route('/dashboard/<path:subpath>')
+    @app.route(app.config['DASHBOARD_BASE'])
+    @app.route('{}'.format(app.config['DASHBOARD_BASE']))
+    @app.route('{}/<path:subpath>'.format(app.config['DASHBOARD_BASE']))
     def index(subpath=None):
         return app.send_static_file('index.html')
 

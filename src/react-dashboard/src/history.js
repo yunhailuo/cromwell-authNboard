@@ -1,2 +1,4 @@
 import { createBrowserHistory } from "history";
-export default createBrowserHistory({ basename: "/dashboard" });
+import config from "./dashboard_config.json";
+
+export default createBrowserHistory({ basename: config.DASHBOARD_BASE });

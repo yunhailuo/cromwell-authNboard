@@ -1,7 +1,7 @@
 import "./App.css";
 import React, { useState, useContext, useEffect } from "react";
 import PropTypes from "prop-types";
-import { useAuth0 } from "./auth";
+import { LogInOut, useAuth0 } from "./auth";
 import { Link } from "react-router-dom";
 import Main from "./main";
 import clsx from "clsx";
@@ -18,11 +18,11 @@ import DashboardIcon from "@material-ui/icons/Dashboard";
 import ViewListIcon from "@material-ui/icons/ViewList";
 import PublishIcon from "@material-ui/icons/Publish";
 import Typography from "@material-ui/core/Typography";
-import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
 import Container from "@material-ui/core/Container";
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import DescriptionIcon from "@material-ui/icons/Description";
 
 const drawerWidth = 240;
 
@@ -89,13 +89,7 @@ const ApiContext = React.createContext({ apiVersion: "v1" });
 export const useApi = () => useContext(ApiContext);
 
 export const App = () => {
-    const {
-        loading,
-        isAuthenticated,
-        loginWithRedirect,
-        logout,
-        authorizedFetch
-    } = useAuth0();
+    const { loading, isAuthenticated, authorizedFetch } = useAuth0();
     const classes = useStyles();
     const [open, setOpen] = useState(false);
     const handleDrawerOpen = () => {
@@ -145,26 +139,7 @@ export const App = () => {
                         >
                             Cromwell Dashboard
                         </Typography>
-                        {isAuthenticated ? (
-                            <Button
-                                variant="contained"
-                                color="secondary"
-                                onClick={() => {
-                                    logout({
-                                        returnTo: window.location.origin
-                                    });
-                                }}
-                            >
-                                Log Out
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="contained"
-                                onClick={() => loginWithRedirect({})}
-                            >
-                                Log In
-                            </Button>
-                        )}
+                        <LogInOut />
                     </Toolbar>
                 </AppBar>
                 <SideBar open={open} />
@@ -223,6 +198,15 @@ const SideBar = ({ open = false }) => {
                     </ListItemIcon>
                     <ListItemText
                         primary="Submit a workflow"
+                        primaryTypographyProps={{ noWrap: true }}
+                    />
+                </ListItem>
+                <ListItem button component={Link} to="/swagger">
+                    <ListItemIcon>
+                        <DescriptionIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary="API documentation"
                         primaryTypographyProps={{ noWrap: true }}
                     />
                 </ListItem>

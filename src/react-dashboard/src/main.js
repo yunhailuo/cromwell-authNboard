@@ -1,9 +1,11 @@
 import React from "react";
 import { Switch, Route } from "react-router-dom";
 import Typography from "@material-ui/core/Typography";
-import { Login, PrivateRoute } from "./auth";
+import { LogInOut, PrivateRoute } from "./auth";
 import Home from "./home";
-import { WorkflowList, Workflow, SubmitWorkflow } from "./workflows";
+import { WorkflowList, Workflow } from "./workflows";
+import WomTool from "./womtool";
+import ApiDoc from "./swagger";
 
 const Main = () => (
     <React.Fragment>
@@ -11,16 +13,17 @@ const Main = () => (
           renders the first one that matches the current URL. */}
         <Switch>
             <Route exact path="/login">
-                <Login />
+                <LogInOut />
             </Route>
             <PrivateRoute
                 path="/workflows/version/:uuid([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+                exact
                 render={props => <Workflow {...props} />}
             />
-            <PrivateRoute path="/workflows/version/query">
+            <PrivateRoute path="/workflows/version/query" exact>
                 <WorkflowList />
             </PrivateRoute>
-            <Route path="/workflows/version">
+            <Route path="/workflows/version" exact>
                 <Typography
                     component="h2"
                     variant="h6"
@@ -29,9 +32,11 @@ const Main = () => (
                 >
                     Submit a Workflow (Construction in progress)
                 </Typography>
-                <SubmitWorkflow />
             </Route>
-            <PrivateRoute path="/">
+            <PrivateRoute path="/swagger" exact>
+                <ApiDoc />
+            </PrivateRoute>
+            <PrivateRoute path="/" exact>
                 <Home />
             </PrivateRoute>
         </Switch>

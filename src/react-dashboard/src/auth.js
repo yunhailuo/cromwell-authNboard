@@ -27,7 +27,7 @@ const INIT_OPTION = {
     audience: config.API_AUDIENCE
 };
 
-const Auth0Context = React.createContext();
+export const Auth0Context = React.createContext();
 export const useAuth0 = () => useContext(Auth0Context);
 export const Auth0Provider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState();
@@ -176,15 +176,26 @@ PrivateRoute.propTypes = {
     render: PropTypes.func
 };
 
-export const Login = () => {
-    const { loginWithRedirect } = useAuth0();
+export const LogInOut = () => {
+    const { isAuthenticated, loginWithRedirect, logout } = useAuth0();
 
+    if (isAuthenticated) {
+        return (
+            <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => {
+                    logout({
+                        returnTo: window.location.origin
+                    });
+                }}
+            >
+                Log Out
+            </Button>
+        );
+    }
     return (
-        <Button
-            variant="contained"
-            color="primary"
-            onClick={() => loginWithRedirect({})}
-        >
+        <Button variant="contained" onClick={() => loginWithRedirect({})}>
             Log In
         </Button>
     );

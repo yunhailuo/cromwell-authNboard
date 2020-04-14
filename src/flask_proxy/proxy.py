@@ -6,12 +6,6 @@ from auth import requires_auth
 proxy = Blueprint('proxy', __name__,)
 
 
-@proxy.route('/engine/<path:subpath>', methods=['GET'])
-@requires_auth(permissions=['read:workflows'])
-def engine_get(subpath):
-    return proxy_request('engine/{}'.format(subpath.lstrip('/')))
-
-
 @proxy.route('/api/<path:subpath>', methods=['GET'])
 @requires_auth(permissions=['read:workflows'])
 def api_get(subpath):
@@ -24,6 +18,18 @@ def api_get(subpath):
 )
 def api_post(subpath):
     return proxy_request('api/{}'.format(subpath.lstrip('/')))
+
+
+@proxy.route('/engine/<path:subpath>', methods=['GET'])
+@requires_auth(permissions=['read:workflows'])
+def engine_get(subpath):
+    return proxy_request('engine/{}'.format(subpath.lstrip('/')))
+
+
+@proxy.route('/swagger/cromwell.yaml', methods=['GET'])
+@requires_auth
+def get_api_swagger_doc():
+    return proxy_request('swagger/cromwell.yaml')
 
 
 def proxy_request(path):

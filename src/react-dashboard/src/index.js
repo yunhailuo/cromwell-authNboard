@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import { BrowserRouter as Router } from "react-router-dom";
+import config from "./dashboard_config.json";
 import { App } from "./App";
 import * as serviceWorker from "./serviceWorker";
 import { Auth0Provider } from "./auth";
@@ -9,7 +10,7 @@ import { Auth0Provider } from "./auth";
 ReactDOM.render(
     <React.StrictMode>
         <Auth0Provider>
-            <Router basename="/dashboard">
+            <Router basename={config.DASHBOARD_BASE}>
                 <App />
             </Router>
         </Auth0Provider>
