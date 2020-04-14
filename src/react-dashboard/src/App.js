@@ -181,7 +181,6 @@ export const App = () => {
 
 const SideBar = ({ open = false }) => {
     const { isAuthenticated } = useAuth0();
-    const { apiVersion } = useApi();
     const classes = useStyles();
 
     if (!isAuthenticated) {
@@ -209,11 +208,7 @@ const SideBar = ({ open = false }) => {
                         primaryTypographyProps={{ noWrap: true }}
                     />
                 </ListItem>
-                <ListItem
-                    button
-                    component={Link}
-                    to={`/workflows/${apiVersion}/query`}
-                >
+                <ListItem button component={Link} to="/workflows/version/query">
                     <ListItemIcon>
                         <ViewListIcon />
                     </ListItemIcon>
@@ -222,11 +217,7 @@ const SideBar = ({ open = false }) => {
                         primaryTypographyProps={{ noWrap: true }}
                     />
                 </ListItem>
-                <ListItem
-                    button
-                    component={Link}
-                    to={`/workflows/${apiVersion}`}
-                >
+                <ListItem button component={Link} to="/workflows/version">
                     <ListItemIcon>
                         <PublishIcon />
                     </ListItemIcon>

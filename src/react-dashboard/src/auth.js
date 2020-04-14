@@ -201,7 +201,7 @@ const useStyles = makeStyles(theme => ({
         height: 240
     },
     tokenArea: {
-        "word-break": "break-all"
+        wordBreak: "break-all"
     }
 }));
 

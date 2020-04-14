@@ -38,13 +38,12 @@ export const WorkflowList = () => {
     const { apiVersion } = useApi();
     const classes = useStyles();
     const [workflows, setWorkflows] = useState([]);
-    const queryUrl = `/api/workflows/${apiVersion}/query`;
     useEffect(() => {
-        authorizedFetch(queryUrl)
+        authorizedFetch(`/api/workflows/${apiVersion}/query`)
             .then(res => res.json())
             .then(res => setWorkflows(res.results))
             .catch(err => console.log(err));
-    }, [authorizedFetch, queryUrl]);
+    }, [authorizedFetch, apiVersion]);
     const [rowCount, setRowCount] = useState(5);
     const addRows = () => setRowCount(rowCount + 5);
     const maxRows = () => setRowCount(workflows.length);
@@ -80,7 +79,7 @@ export const WorkflowList = () => {
                                             {col === "id" ? (
                                                 <LinkStyle
                                                     component={Link}
-                                                    to={`/workflows/${apiVersion}/${workflow[col]}`}
+                                                    to={`/workflows/version/${workflow[col]}`}
                                                 >
                                                     {workflow[col]}
                                                 </LinkStyle>
@@ -137,10 +136,9 @@ export const Workflow = ({
 }) => {
     const { authorizedFetch } = useAuth0();
     const { apiVersion } = useApi();
-    const workflowUrl = `/api/workflows/${apiVersion}/${uuid}`;
     const [metadata, setMetadata] = useState({});
     useEffect(() => {
-        authorizedFetch(workflowUrl + "/metadata")
+        authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then(res => res.json())
             .then(res => {
                 var downloadUrl = URL.createObjectURL(
@@ -158,7 +156,7 @@ export const Workflow = ({
                 setMetadata(res);
             })
             .catch(err => console.log(err));
-        authorizedFetch(workflowUrl + "/timing")
+        authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/timing`)
             .then(res => res.text())
             .then(res => {
                 const domparser = new DOMParser();
@@ -175,7 +173,7 @@ export const Workflow = ({
                 }
             })
             .catch(err => console.log(err));
-    }, [authorizedFetch, workflowUrl]);
+    }, [authorizedFetch, apiVersion, uuid]);
     const basicMetadataFields = [
         "id",
         "workflowName",

@@ -16,6 +16,10 @@ const useStyles = makeStyles(theme => ({
         paddingTop: theme.spacing(4),
         paddingBottom: theme.spacing(4)
     },
+    gridContainer: {
+        justifyContent: "center",
+        alignItems: "center"
+    },
     paper: {
         padding: theme.spacing(2),
         display: "flex",
@@ -24,9 +28,6 @@ const useStyles = makeStyles(theme => ({
     },
     fixedHeight: {
         height: 240
-    },
-    tokenArea: {
-        "word-break": "break-all"
     }
 }));
 
@@ -67,7 +68,7 @@ const Home = () => {
     return (
         <React.Fragment>
             <Container maxWidth="lg" className={classes.container}>
-                <Grid container spacing={3}>
+                <Grid container spacing={3} className={classes.gridContainer}>
                     <Grid item xs={12} md={4} lg={3}>
                         <Paper className={fixedHeightPaper}>
                             <Typography
