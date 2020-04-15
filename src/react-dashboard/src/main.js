@@ -33,6 +33,17 @@ const Main = () => (
                     Submit a Workflow (Construction in progress)
                 </Typography>
             </Route>
+            <PrivateRoute path="/womtool/version/describe" exact>
+                <Typography
+                    component="h2"
+                    variant="h6"
+                    color="primary"
+                    gutterBottom
+                >
+                    Workflow Object Model (WOM) tool
+                </Typography>
+                <WomTool />
+            </PrivateRoute>
             <PrivateRoute path="/swagger" exact>
                 <ApiDoc />
             </PrivateRoute>

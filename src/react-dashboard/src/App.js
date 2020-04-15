@@ -7,6 +7,7 @@ import Main from "./main";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import CssBaseline from "@material-ui/core/CssBaseline";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import Drawer from "@material-ui/core/Drawer";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
@@ -22,6 +23,7 @@ import IconButton from "@material-ui/core/IconButton";
 import Container from "@material-ui/core/Container";
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import FindInPageIcon from "@material-ui/icons/FindInPage";
 import DescriptionIcon from "@material-ui/icons/Description";
 
 const drawerWidth = 240;
@@ -109,7 +111,7 @@ export const App = () => {
     }, [isAuthenticated, authorizedFetch]);
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <CircularProgress />;
     }
     return (
         <ApiContext.Provider value={{ apiVersion }}>
@@ -198,6 +200,20 @@ const SideBar = ({ open = false }) => {
                     </ListItemIcon>
                     <ListItemText
                         primary="Submit a workflow"
+                        primaryTypographyProps={{ noWrap: true }}
+                    />
+                </ListItem>
+
+                <ListItem
+                    button
+                    component={Link}
+                    to="/womtool/version/describe"
+                >
+                    <ListItemIcon>
+                        <FindInPageIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary="WOM tool"
                         primaryTypographyProps={{ noWrap: true }}
                     />
                 </ListItem>

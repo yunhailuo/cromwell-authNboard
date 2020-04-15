@@ -233,7 +233,7 @@ export const UserTile = () => {
                         >
                             <Avatar src={user.picture} />
                         </Box>
-                        <List dense>
+                        <List>
                             {user.name !== user.email ? (
                                 <ListItem>
                                     <ListItemText>

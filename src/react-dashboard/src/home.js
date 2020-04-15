@@ -28,6 +28,10 @@ const useStyles = makeStyles(theme => ({
     },
     fixedHeight: {
         height: 240
+    },
+    superDense: {
+        paddingTop: 1,
+        paddingBottom: 1
     }
 }));
 
@@ -99,7 +103,10 @@ const Home = () => {
                                     .sort()
                                     .reverse()
                                     .map(k => (
-                                        <ListItem key={k}>
+                                        <ListItem
+                                            key={k}
+                                            className={classes.superDense}
+                                        >
                                             <ListItemText>
                                                 <strong>{k}</strong>
                                                 {`: ${workflowSummary[k]}`}
