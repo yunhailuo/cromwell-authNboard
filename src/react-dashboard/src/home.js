@@ -1,38 +1,38 @@
-import React, { useState, useEffect } from "react";
-import { UserTile, useAuth0 } from "./auth";
-import { useApi } from "./App";
-import clsx from "clsx";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import Grid from "@material-ui/core/Grid";
-import Paper from "@material-ui/core/Paper";
-import Typography from "@material-ui/core/Typography";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
+import React, { useState, useEffect } from 'react';
+import { UserTile, useAuth0 } from './auth';
+import { useApi } from './App';
+import clsx from 'clsx';
+import { makeStyles } from '@material-ui/core/styles';
+import Container from '@material-ui/core/Container';
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Typography from '@material-ui/core/Typography';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
     container: {
         paddingTop: theme.spacing(4),
-        paddingBottom: theme.spacing(4)
+        paddingBottom: theme.spacing(4),
     },
     gridContainer: {
-        justifyContent: "center",
-        alignItems: "center"
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     paper: {
         padding: theme.spacing(2),
-        display: "flex",
-        overflow: "auto",
-        flexDirection: "column"
+        display: 'flex',
+        overflow: 'auto',
+        flexDirection: 'column',
     },
     fixedHeight: {
-        height: 240
+        height: 240,
     },
     superDense: {
         paddingTop: 1,
-        paddingBottom: 1
-    }
+        paddingBottom: 1,
+    },
 }));
 
 const Home = () => {
@@ -45,17 +45,17 @@ const Home = () => {
     const [engineStatus, setEngineStatus] = useState([]);
     const enginUrl = `/engine/${apiVersion}`;
     useEffect(() => {
-        authorizedFetch(enginUrl + "/status", {})
-            .then(res => res.statusText)
-            .then(res => setEngineStatus(res))
-            .catch(err => console.log(err));
+        authorizedFetch(enginUrl + '/status', {})
+            .then((res) => res.statusText)
+            .then((res) => setEngineStatus(res))
+            .catch((err) => console.log(err));
     }, [authorizedFetch, enginUrl]);
     const [workflowSummary, setWorkflowSummary] = useState({});
     const queryUrl = `/api/workflows/${apiVersion}/query`;
     useEffect(() => {
         authorizedFetch(queryUrl)
-            .then(res => res.json())
-            .then(res => {
+            .then((res) => res.json())
+            .then((res) => {
                 const summary = res.results.reduce((acc, res) => {
                     if (res.status in acc) {
                         acc[res.status] = acc[res.status] + 1;
@@ -66,7 +66,7 @@ const Home = () => {
                 }, {});
                 setWorkflowSummary(summary);
             })
-            .catch(err => console.log(err));
+            .catch((err) => console.log(err));
     }, [authorizedFetch, queryUrl]);
 
     return (
@@ -102,7 +102,7 @@ const Home = () => {
                                 {Object.keys(workflowSummary)
                                     .sort()
                                     .reverse()
-                                    .map(k => (
+                                    .map((k) => (
                                         <ListItem
                                             key={k}
                                             className={classes.superDense}

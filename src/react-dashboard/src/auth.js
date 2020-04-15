@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
-import PropTypes from "prop-types";
-import createAuth0Client from "@auth0/auth0-spa-js";
-import config from "./dashboard_config.json";
-import history from "./history";
-import { Route, Redirect } from "react-router-dom";
-import clsx from "clsx";
-import { makeStyles } from "@material-ui/core/styles";
-import Button from "@material-ui/core/Button";
-import Grid from "@material-ui/core/Grid";
-import Paper from "@material-ui/core/Paper";
-import Typography from "@material-ui/core/Typography";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
-import Box from "@material-ui/core/Box";
-import Avatar from "@material-ui/core/Avatar";
-import Dialog from "@material-ui/core/Dialog";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogActions from "@material-ui/core/DialogActions";
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import PropTypes from 'prop-types';
+import createAuth0Client from '@auth0/auth0-spa-js';
+import config from './dashboard_config.json';
+import history from './history';
+import { Route, Redirect } from 'react-router-dom';
+import clsx from 'clsx';
+import { makeStyles } from '@material-ui/core/styles';
+import Button from '@material-ui/core/Button';
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Typography from '@material-ui/core/Typography';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import Box from '@material-ui/core/Box';
+import Avatar from '@material-ui/core/Avatar';
+import Dialog from '@material-ui/core/Dialog';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogActions from '@material-ui/core/DialogActions';
 
 const INIT_OPTION = {
     domain: config.AUTH0_DOMAIN,
     client_id: config.CLIENT_ID,
     redirect_uri: window.location.origin,
-    audience: config.API_AUDIENCE
+    audience: config.API_AUDIENCE,
 };
 
 export const Auth0Context = React.createContext();
@@ -42,16 +42,16 @@ export const Auth0Provider = ({ children }) => {
             setAuth0(auth0FromHook);
 
             if (
-                window.location.search.includes("code=") &&
-                window.location.search.includes("state=")
+                window.location.search.includes('code=') &&
+                window.location.search.includes('state=')
             ) {
                 const {
-                    appState
+                    appState,
                 } = await auth0FromHook.handleRedirectCallback();
                 history.push(
                     appState && appState.targetUrl
                         ? appState.targetUrl
-                        : window.location.pathname
+                        : window.location.pathname,
                 );
             }
 
@@ -94,9 +94,10 @@ export const Auth0Provider = ({ children }) => {
 
     // In case a consent is required, pop up is necessary.
     const getToken = (...p) =>
-        auth0Client
-            .getTokenSilently(...p)
-            .then(res => res, () => auth0Client.getTokenWithPopup(...p));
+        auth0Client.getTokenSilently(...p).then(
+            (res) => res,
+            () => auth0Client.getTokenWithPopup(...p),
+        );
 
     const authorizedFetch = async (resource, init = {}) => {
         const token = await getToken();
@@ -118,7 +119,7 @@ export const Auth0Provider = ({ children }) => {
                 getIdTokenClaims: (...p) => auth0Client.getIdTokenClaims(...p),
                 loginWithRedirect: (...p) =>
                     auth0Client.loginWithRedirect(...p),
-                logout: (...p) => auth0Client.logout(...p)
+                logout: (...p) => auth0Client.logout(...p),
             }}
         >
             {children}
@@ -126,7 +127,7 @@ export const Auth0Provider = ({ children }) => {
     );
 };
 Auth0Provider.propTypes = {
-    children: PropTypes.element.isRequired
+    children: PropTypes.element.isRequired,
 };
 
 // A wrapper for <Route> that redirects to the login screen
@@ -150,14 +151,14 @@ export const PrivateRoute = ({ children, component, render, ...rest }) => {
                     render={({ location }) => (
                         <Redirect
                             to={{
-                                pathname: "/login",
-                                state: { from: location }
+                                pathname: '/login',
+                                state: { from: location },
                             }}
                         />
                     )}
                 />
             ) : children ? (
-                typeof children === "function" ? (
+                typeof children === 'function' ? (
                     <Route {...rest} children={children} /> // eslint-disable-line react/no-children-prop
                 ) : (
                     <Route {...rest}>{children}</Route>
@@ -173,7 +174,7 @@ export const PrivateRoute = ({ children, component, render, ...rest }) => {
 PrivateRoute.propTypes = {
     children: PropTypes.oneOfType([PropTypes.func, PropTypes.node]),
     component: PropTypes.elementType,
-    render: PropTypes.func
+    render: PropTypes.func,
 };
 
 export const LogInOut = () => {
@@ -186,7 +187,7 @@ export const LogInOut = () => {
                 color="secondary"
                 onClick={() => {
                     logout({
-                        returnTo: window.location.origin
+                        returnTo: window.location.origin,
                     });
                 }}
             >
@@ -201,19 +202,19 @@ export const LogInOut = () => {
     );
 };
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
     paper: {
         padding: theme.spacing(2),
-        display: "flex",
-        overflow: "auto",
-        flexDirection: "column"
+        display: 'flex',
+        overflow: 'auto',
+        flexDirection: 'column',
     },
     fixedHeight: {
-        height: 240
+        height: 240,
     },
     tokenArea: {
-        wordBreak: "break-all"
-    }
+        wordBreak: 'break-all',
+    },
 }));
 
 export const UserTile = () => {
@@ -268,7 +269,10 @@ const GetApiToken = () => {
     const { getToken } = useAuth0();
 
     const handleClickOpen = () => {
-        getToken().then(res => setApiToken(res), err => console.error(err));
+        getToken().then(
+            (res) => setApiToken(res),
+            (err) => console.error(err),
+        );
         setOpen(true);
     };
     const tokenRef = useRef(null);
@@ -278,7 +282,7 @@ const GetApiToken = () => {
         range.selectNodeContents(tokenRef.current);
         selection.removeAllRanges();
         selection.addRange(range);
-        document.execCommand("copy");
+        document.execCommand('copy');
         setOpen(false);
     };
     const handleClose = () => {

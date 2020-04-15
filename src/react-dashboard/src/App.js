@@ -1,93 +1,93 @@
-import "./App.css";
-import React, { useState, useContext, useEffect } from "react";
-import PropTypes from "prop-types";
-import { LogInOut, useAuth0 } from "./auth";
-import { Link } from "react-router-dom";
-import Main from "./main";
-import clsx from "clsx";
-import { makeStyles } from "@material-ui/core/styles";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import Drawer from "@material-ui/core/Drawer";
-import AppBar from "@material-ui/core/AppBar";
-import Toolbar from "@material-ui/core/Toolbar";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-import DashboardIcon from "@material-ui/icons/Dashboard";
-import ViewListIcon from "@material-ui/icons/ViewList";
-import PublishIcon from "@material-ui/icons/Publish";
-import Typography from "@material-ui/core/Typography";
-import IconButton from "@material-ui/core/IconButton";
-import Container from "@material-ui/core/Container";
-import MenuIcon from "@material-ui/icons/Menu";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import FindInPageIcon from "@material-ui/icons/FindInPage";
-import DescriptionIcon from "@material-ui/icons/Description";
+import './App.css';
+import React, { useState, useContext, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { LogInOut, useAuth0 } from './auth';
+import { Link } from 'react-router-dom';
+import Main from './main';
+import clsx from 'clsx';
+import { makeStyles } from '@material-ui/core/styles';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Drawer from '@material-ui/core/Drawer';
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import DashboardIcon from '@material-ui/icons/Dashboard';
+import ViewListIcon from '@material-ui/icons/ViewList';
+import PublishIcon from '@material-ui/icons/Publish';
+import Typography from '@material-ui/core/Typography';
+import IconButton from '@material-ui/core/IconButton';
+import Container from '@material-ui/core/Container';
+import MenuIcon from '@material-ui/icons/Menu';
+import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
+import FindInPageIcon from '@material-ui/icons/FindInPage';
+import DescriptionIcon from '@material-ui/icons/Description';
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
     root: {
-        display: "flex"
+        display: 'flex',
     },
     toolbar: {
-        paddingRight: 24 // keep right padding when drawer closed
+        paddingRight: 24, // keep right padding when drawer closed
     },
     toolbarIcon: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        padding: "0 8px",
-        ...theme.mixins.toolbar
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        padding: '0 8px',
+        ...theme.mixins.toolbar,
     },
     appBar: {
         zIndex: theme.zIndex.drawer + 1,
-        transition: theme.transitions.create(["width", "margin"], {
+        transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
-        })
+            duration: theme.transitions.duration.leavingScreen,
+        }),
     },
     menuButton: {
-        marginRight: 36
+        marginRight: 36,
     },
     title: {
-        flexGrow: 1
+        flexGrow: 1,
     },
     drawerPaper: {
-        position: "relative",
-        whiteSpace: "nowrap",
+        position: 'relative',
+        whiteSpace: 'nowrap',
         width: drawerWidth,
-        transition: theme.transitions.create("width", {
+        transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen
-        })
+            duration: theme.transitions.duration.enteringScreen,
+        }),
     },
     drawerPaperClose: {
-        overflowX: "hidden",
-        transition: theme.transitions.create("width", {
+        overflowX: 'hidden',
+        transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
+            duration: theme.transitions.duration.leavingScreen,
         }),
         width: theme.spacing(7),
-        [theme.breakpoints.up("sm")]: {
-            width: theme.spacing(9)
-        }
+        [theme.breakpoints.up('sm')]: {
+            width: theme.spacing(9),
+        },
     },
     appBarSpacer: theme.mixins.toolbar,
     content: {
         flexGrow: 1,
-        height: "100vh",
-        overflow: "auto"
+        height: '100vh',
+        overflow: 'auto',
     },
     container: {
         paddingTop: theme.spacing(4),
-        paddingBottom: theme.spacing(4)
-    }
+        paddingBottom: theme.spacing(4),
+    },
 }));
 
-const ApiContext = React.createContext({ apiVersion: "v1" });
+const ApiContext = React.createContext({ apiVersion: 'v1' });
 export const useApi = () => useContext(ApiContext);
 
 export const App = () => {
@@ -101,12 +101,14 @@ export const App = () => {
         setOpen(false);
     };
 
-    const [apiVersion, setApiVersion] = useState("v1");
+    const [apiVersion, setApiVersion] = useState('v1');
     useEffect(() => {
         if (isAuthenticated) {
-            authorizedFetch("/engine/v1/version")
-                .then(res => res.json())
-                .then(version => setApiVersion(`v${version.cromwell || "1"}`));
+            authorizedFetch('/engine/v1/version')
+                .then((res) => res.json())
+                .then((version) =>
+                    setApiVersion(`v${version.cromwell || '1'}`),
+                );
         }
     }, [isAuthenticated, authorizedFetch]);
 
@@ -169,8 +171,8 @@ const SideBar = ({ open = false }) => {
             classes={{
                 paper: clsx(
                     classes.drawerPaper,
-                    !open && classes.drawerPaperClose
-                )
+                    !open && classes.drawerPaperClose,
+                ),
             }}
             open={open}
         >
@@ -231,5 +233,5 @@ const SideBar = ({ open = false }) => {
     );
 };
 SideBar.propTypes = {
-    open: PropTypes.bool.isRequired
+    open: PropTypes.bool.isRequired,
 };

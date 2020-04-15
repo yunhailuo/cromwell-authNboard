@@ -1,36 +1,40 @@
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import { useAuth0 } from "./auth";
-import { useApi } from "./App";
-import { Link } from "react-router-dom";
-import { makeStyles } from "@material-ui/core/styles";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
-import Divider from "@material-ui/core/Divider";
-import LinkStyle from "@material-ui/core/Link";
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { useAuth0 } from './auth';
+import { useApi } from './App';
+import { Link } from 'react-router-dom';
+import { makeStyles } from '@material-ui/core/styles';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import Divider from '@material-ui/core/Divider';
+import LinkStyle from '@material-ui/core/Link';
+import Button from '@material-ui/core/Button';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
     seeMore: {
-        marginTop: theme.spacing(3)
-    }
+        marginTop: theme.spacing(3),
+    },
+    input: {
+        display: 'none',
+    },
 }));
 
 const workflowColumns = [
-    "id",
-    "name",
-    "submission",
-    "start",
-    "end",
-    "status",
-    "metadataArchiveStatus"
+    'id',
+    'name',
+    'submission',
+    'start',
+    'end',
+    'status',
+    'metadataArchiveStatus',
 ];
 
 export const WorkflowList = () => {
@@ -40,9 +44,9 @@ export const WorkflowList = () => {
     const [workflows, setWorkflows] = useState([]);
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/query`)
-            .then(res => res.json())
-            .then(res => setWorkflows(res.results))
-            .catch(err => console.log(err));
+            .then((res) => res.json())
+            .then((res) => setWorkflows(res.results))
+            .catch((err) => console.log(err));
     }, [authorizedFetch, apiVersion]);
     const [rowCount, setRowCount] = useState(5);
     const addRows = () => setRowCount(rowCount + 5);
@@ -64,7 +68,7 @@ export const WorkflowList = () => {
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                {workflowColumns.map(col => (
+                                {workflowColumns.map((col) => (
                                     <TableCell key={col}>
                                         <strong>{col}</strong>
                                     </TableCell>
@@ -72,11 +76,11 @@ export const WorkflowList = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {workflows.slice(0, rowCount).map(workflow => (
+                            {workflows.slice(0, rowCount).map((workflow) => (
                                 <TableRow key={workflow.id}>
-                                    {workflowColumns.map(col => (
+                                    {workflowColumns.map((col) => (
                                         <TableCell key={col}>
-                                            {col === "id" ? (
+                                            {col === 'id' ? (
                                                 <LinkStyle
                                                     component={Link}
                                                     to={`/workflows/version/${workflow[col]}`}
@@ -131,58 +135,58 @@ export const WorkflowList = () => {
 
 export const Workflow = ({
     match: {
-        params: { uuid }
-    }
+        params: { uuid },
+    },
 }) => {
     const { authorizedFetch } = useAuth0();
     const { apiVersion } = useApi();
     const [metadata, setMetadata] = useState({});
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
-            .then(res => res.json())
-            .then(res => {
+            .then((res) => res.json())
+            .then((res) => {
                 var downloadUrl = URL.createObjectURL(
                     new Blob([JSON.stringify(res)], {
-                        type: "application/json"
-                    })
+                        type: 'application/json',
+                    }),
                 );
-                var downloadLink = document.createElement("a");
-                downloadLink.download = "metadata.json";
+                var downloadLink = document.createElement('a');
+                downloadLink.download = 'metadata.json';
                 downloadLink.href = downloadUrl;
-                downloadLink.textContent = "Download metadata.json";
+                downloadLink.textContent = 'Download metadata.json';
                 document
-                    .getElementById("metadata-download")
+                    .getElementById('metadata-download')
                     .appendChild(downloadLink);
                 setMetadata(res);
             })
-            .catch(err => console.log(err));
+            .catch((err) => console.log(err));
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/timing`)
-            .then(res => res.text())
-            .then(res => {
+            .then((res) => res.text())
+            .then((res) => {
                 const domparser = new DOMParser();
-                let doc = domparser.parseFromString(res, "text/html");
+                let doc = domparser.parseFromString(res, 'text/html');
                 for (let e of doc.scripts) {
                     if (e.innerHTML.length > 0) {
-                        var script = document.createElement("script");
-                        script.type = "text/javascript";
+                        var script = document.createElement('script');
+                        script.type = 'text/javascript';
                         script.text = e.text;
                         document
-                            .getElementById("chart_div")
+                            .getElementById('chart_div')
                             .appendChild(script);
                     }
                 }
             })
-            .catch(err => console.log(err));
+            .catch((err) => console.log(err));
     }, [authorizedFetch, apiVersion, uuid]);
     const basicMetadataFields = [
-        "id",
-        "workflowName",
-        "submission",
-        "start",
-        "end",
-        "workflowRoot",
-        "actualWorkflowLanguage",
-        "actualWorkflowLanguageVersion"
+        'id',
+        'workflowName',
+        'submission',
+        'start',
+        'end',
+        'workflowRoot',
+        'actualWorkflowLanguage',
+        'actualWorkflowLanguageVersion',
     ];
 
     return (
@@ -197,7 +201,7 @@ export const Workflow = ({
             </Typography>
             {/* Basic info */}
             <List dense>
-                {basicMetadataFields.map(k =>
+                {basicMetadataFields.map((k) =>
                     metadata[k] ? (
                         <ListItem key={k}>
                             <ListItemText>
@@ -205,7 +209,7 @@ export const Workflow = ({
                                 {`: ${metadata[k]}`}
                             </ListItemText>
                         </ListItem>
-                    ) : null
+                    ) : null,
                 )}
                 <ListItem id="metadata-download" />
             </List>
@@ -224,7 +228,7 @@ export const Workflow = ({
                 {metadata.labels && Object.keys(metadata.labels).length > 0 ? (
                     Object.keys(metadata.labels)
                         .sort()
-                        .map(k => (
+                        .map((k) => (
                             <ListItem key={k}>
                                 <ListItemText>
                                     <strong>{k}</strong>
@@ -247,12 +251,12 @@ export const Workflow = ({
                 {metadata.inputs && Object.keys(metadata.inputs).length > 0 ? (
                     Object.keys(metadata.inputs)
                         .filter(
-                            k =>
+                            (k) =>
                                 metadata.inputs[k] &&
-                                metadata.inputs[k].length > 0
+                                metadata.inputs[k].length > 0,
                         )
                         .sort()
-                        .map(k => (
+                        .map((k) => (
                             <ListItem key={k}>
                                 <ListItemText>
                                     <strong>{k}</strong>
@@ -272,22 +276,23 @@ export const Workflow = ({
                 <Box textAlign="left">Outputs</Box>
             </Typography>
             <List dense>
-                {metadata.outputs && Object.keys(metadata.outputs).length > 0 ? (
-                    Object.keys(metadata.outputs)
-                        .sort()
-                        .map(k => (
-                            <ListItem key={k}>
-                                <ListItemText>
-                                    <strong>{k}</strong>
-                                    {`: ${metadata.outputs[k]}`}
-                                </ListItemText>
-                            </ListItem>
-                        ))
-                ) : (
-                    <ListItem>
-                        <ListItemText primary="No outputs" />
-                    </ListItem>
-                )}
+                {metadata.outputs &&
+                Object.keys(metadata.outputs).length > 0 ? (
+                        Object.keys(metadata.outputs)
+                            .sort()
+                            .map((k) => (
+                                <ListItem key={k}>
+                                    <ListItemText>
+                                        <strong>{k}</strong>
+                                        {`: ${metadata.outputs[k]}`}
+                                    </ListItemText>
+                                </ListItem>
+                            ))
+                    ) : (
+                        <ListItem>
+                            <ListItemText primary="No outputs" />
+                        </ListItem>
+                    )}
             </List>
         </React.Fragment>
     );
@@ -295,7 +300,40 @@ export const Workflow = ({
 Workflow.propTypes = {
     match: PropTypes.shape({
         params: PropTypes.shape({
-            uuid: PropTypes.string
-        })
-    }).isRequired
+            uuid: PropTypes.string,
+        }),
+    }).isRequired,
+};
+
+export const SubmitWorkflow = () => {
+    const classes = useStyles();
+    const [inputJson, setInputJson] = useState();
+    const inputJsonChange = (event) => setInputJson(event.target.files[0]);
+    const submitWorkflow = () => console.log(inputJson);
+
+    return (
+        <React.Fragment>
+            {inputJson ? <div>{inputJson.name}</div> : null}
+            <input
+                accept=".json"
+                className={classes.input}
+                id="input-json-file"
+                type="file"
+                onChange={inputJsonChange}
+            />
+            <label htmlFor="input-json-file">
+                <Button variant="contained" color="primary" component="span">
+                    Upload Input JSON
+                </Button>
+            </label>
+            <Button
+                variant="contained"
+                color="secondary"
+                component="span"
+                onClick={submitWorkflow}
+            >
+                Submit
+            </Button>
+        </React.Fragment>
+    );
 };
