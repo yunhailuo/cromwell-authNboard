@@ -1,139 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useAuth0 } from './auth';
-import { useApi } from './App';
-import { Link } from 'react-router-dom';
-import { makeStyles } from '@material-ui/core/styles';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
+import { useAuth0 } from '../auth';
+import { useApi } from '../App';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Divider from '@material-ui/core/Divider';
-import LinkStyle from '@material-ui/core/Link';
-import Button from '@material-ui/core/Button';
 
-const useStyles = makeStyles((theme) => ({
-    seeMore: {
-        marginTop: theme.spacing(3),
-    },
-    input: {
-        display: 'none',
-    },
-}));
-
-const workflowColumns = [
-    'id',
-    'name',
-    'submission',
-    'start',
-    'end',
-    'status',
-    'metadataArchiveStatus',
-];
-
-export const WorkflowList = () => {
-    const { authorizedFetch } = useAuth0();
-    const { apiVersion } = useApi();
-    const classes = useStyles();
-    const [workflows, setWorkflows] = useState([]);
-    useEffect(() => {
-        authorizedFetch(`/api/workflows/${apiVersion}/query`)
-            .then((res) => res.json())
-            .then((res) => setWorkflows(res.results))
-            .catch((err) => console.log(err));
-    }, [authorizedFetch, apiVersion]);
-    const [rowCount, setRowCount] = useState(5);
-    const addRows = () => setRowCount(rowCount + 5);
-    const maxRows = () => setRowCount(workflows.length);
-    const resetRows = () => setRowCount(5);
-
-    return (
-        <React.Fragment>
-            <Typography
-                component="h2"
-                variant="h6"
-                color="primary"
-                gutterBottom
-            >
-                Workflows
-            </Typography>
-            {workflows.length > 0 ? (
-                <React.Fragment>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                {workflowColumns.map((col) => (
-                                    <TableCell key={col}>
-                                        <strong>{col}</strong>
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {workflows.slice(0, rowCount).map((workflow) => (
-                                <TableRow key={workflow.id}>
-                                    {workflowColumns.map((col) => (
-                                        <TableCell key={col}>
-                                            {col === 'id' ? (
-                                                <LinkStyle
-                                                    component={Link}
-                                                    to={`/workflows/version/${workflow[col]}`}
-                                                >
-                                                    {workflow[col]}
-                                                </LinkStyle>
-                                            ) : (
-                                                workflow[col]
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    {rowCount < workflows.length ? (
-                        <div className={classes.seeMore}>
-                            <LinkStyle
-                                color="primary"
-                                href="#"
-                                onClick={addRows}
-                            >
-                                See more workflows
-                            </LinkStyle>
-                            <Divider orientation="vertical" flexItem />
-                            <LinkStyle
-                                color="primary"
-                                href="#"
-                                onClick={maxRows}
-                            >
-                                See all
-                            </LinkStyle>
-                        </div>
-                    ) : (
-                        <div className={classes.seeMore}>
-                            <LinkStyle
-                                color="primary"
-                                href="#"
-                                onClick={resetRows}
-                            >
-                                See 5
-                            </LinkStyle>
-                        </div>
-                    )}
-                </React.Fragment>
-            ) : (
-                <div>No workflows found.</div>
-            )}
-        </React.Fragment>
-    );
-};
-
-export const Workflow = ({
+const Workflow = ({
     match: {
         params: { uuid },
     },
@@ -304,36 +180,4 @@ Workflow.propTypes = {
         }),
     }).isRequired,
 };
-
-export const SubmitWorkflow = () => {
-    const classes = useStyles();
-    const [inputJson, setInputJson] = useState();
-    const inputJsonChange = (event) => setInputJson(event.target.files[0]);
-    const submitWorkflow = () => console.log(inputJson);
-
-    return (
-        <React.Fragment>
-            {inputJson ? <div>{inputJson.name}</div> : null}
-            <input
-                accept=".json"
-                className={classes.input}
-                id="input-json-file"
-                type="file"
-                onChange={inputJsonChange}
-            />
-            <label htmlFor="input-json-file">
-                <Button variant="contained" color="primary" component="span">
-                    Upload Input JSON
-                </Button>
-            </label>
-            <Button
-                variant="contained"
-                color="secondary"
-                component="span"
-                onClick={submitWorkflow}
-            >
-                Submit
-            </Button>
-        </React.Fragment>
-    );
-};
+export default Workflow;
