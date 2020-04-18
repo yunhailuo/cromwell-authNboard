@@ -12,12 +12,20 @@ def api_get(subpath):
     return proxy_request('api/{}'.format(subpath.lstrip('/')))
 
 
-@proxy.route('/api/<path:subpath>', methods=['POST'])
+@proxy.route('/api/workflows/<path:subpath>', methods=['POST'])
+@requires_auth(
+    permissions=['create:workflows', 'update:workflows']
+)
+def workflows_post(subpath):
+    return proxy_request('api/workflows/{}'.format(subpath.lstrip('/')))
+
+
+@proxy.route('/api/womtool/<path:subpath>', methods=['POST'])
 @requires_auth(
     permissions=['read:workflows', 'create:workflows', 'update:workflows']
 )
-def api_post(subpath):
-    return proxy_request('api/{}'.format(subpath.lstrip('/')))
+def womtool(subpath):
+    return proxy_request('api/womtool/{}'.format(subpath.lstrip('/')))
 
 
 @proxy.route('/engine/<path:subpath>', methods=['GET'])
