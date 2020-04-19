@@ -27,7 +27,7 @@ const INIT_OPTION = {
     audience: config.API_AUDIENCE,
 };
 
-export const Auth0Context = React.createContext();
+const Auth0Context = React.createContext();
 export const useAuth0 = () => useContext(Auth0Context);
 export const Auth0Provider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState();

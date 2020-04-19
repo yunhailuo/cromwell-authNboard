@@ -1,42 +1,29 @@
-import React from 'react';
-import { Auth0Context } from './auth';
+import React, { useEffect, useRef } from 'react';
+import { useAuth0 } from './auth';
 import SwaggerUI from 'swagger-ui';
 // not declared dependency; swagger-ui uses the following to load YAML spec
 import YAML from 'js-yaml';
 import 'swagger-ui/dist/swagger-ui.css';
 import Box from '@material-ui/core/Box';
 
-class ApiDoc extends React.Component {
-    constructor(props) {
-        super(props);
-        this.apiDocContainer = React.createRef();
-    }
+const ApiDoc = () => {
+    const apiDocContainer = useRef();
+    const { authorizedFetch } = useAuth0();
 
-    componentDidMount() {
-        const { authorizedFetch } = this.context;
+    useEffect(() => {
         authorizedFetch('/swagger/cromwell.yaml')
             .then((res) => res.text())
             .then((res) =>
                 SwaggerUI({
-                    domNode: this.apiDocContainer.current,
+                    domNode: apiDocContainer.current,
                     spec: YAML.safeLoad(res),
                     deepLinking: true,
                     presets: [SwaggerUI.presets.apis],
                 }),
             )
             .catch((err) => console.log(err));
-    }
+    }, [authorizedFetch, apiDocContainer]);
 
-    render() {
-        return (
-            <Box
-                id="api-swagger-doc"
-                textAlign="start"
-                ref={this.apiDocContainer}
-            />
-        );
-    }
-}
-ApiDoc.contextType = Auth0Context;
-
+    return <Box textAlign="start" ref={apiDocContainer} />;
+};
 export default ApiDoc;
