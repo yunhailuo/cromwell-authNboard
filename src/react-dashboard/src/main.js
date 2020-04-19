@@ -2,7 +2,7 @@ import React from 'react';
 import { Switch, Route } from 'react-router-dom';
 import { LogInOut, PrivateRoute } from './auth';
 import Home from './home';
-import { WorkflowList, Workflow, SubmitWorkflow } from './workflows';
+import { WorkflowTable, Workflow, SubmitWorkflow } from './workflows';
 import WomTool from './womtool';
 import ApiDoc from './swagger';
 
@@ -20,7 +20,7 @@ const Main = () => (
                 render={(props) => <Workflow {...props} />}
             />
             <PrivateRoute path="/workflows/version/query" exact>
-                <WorkflowList />
+                <WorkflowTable />
             </PrivateRoute>
             <Route path="/workflows/version" exact>
                 <SubmitWorkflow />

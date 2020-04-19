@@ -115,10 +115,9 @@ export const App = () => {
 
     const [appBarTitle, setAppBarTitle] = useState('Cromwell Dashboard');
 
-    if (loading) {
-        return <CircularProgress />;
-    }
-    return (
+    return loading ? (
+        <CircularProgress />
+    ) : (
         <AppContext.Provider value={{ apiVersion, setAppBarTitle }}>
             <div className={`App ${classes.root}`}>
                 <CssBaseline />
