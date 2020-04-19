@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth0 } from '../auth';
-import { useApi } from '../App';
+import { useApp } from '../App';
 import { Link } from 'react-router-dom';
 import { makeStyles } from '@material-ui/core/styles';
 import Table from '@material-ui/core/Table';
@@ -8,7 +8,6 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
 import LinkStyle from '@material-ui/core/Link';
 
@@ -30,7 +29,8 @@ const workflowColumns = [
 
 const WorkflowList = () => {
     const { authorizedFetch } = useAuth0();
-    const { apiVersion } = useApi();
+    const { apiVersion, setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Workflows'));
     const classes = useStyles();
     const [workflows, setWorkflows] = useState([]);
     useEffect(() => {
@@ -46,14 +46,6 @@ const WorkflowList = () => {
 
     return (
         <React.Fragment>
-            <Typography
-                component="h2"
-                variant="h6"
-                color="primary"
-                gutterBottom
-            >
-                Workflows
-            </Typography>
             {workflows.length > 0 ? (
                 <React.Fragment>
                     <Table size="small">

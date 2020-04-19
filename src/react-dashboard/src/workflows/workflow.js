@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth0 } from '../auth';
-import { useApi } from '../App';
+import { useApp } from '../App';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import List from '@material-ui/core/List';
@@ -9,13 +9,26 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Divider from '@material-ui/core/Divider';
 
+const basicMetadataFields = [
+    'id',
+    'workflowName',
+    'submission',
+    'start',
+    'end',
+    'workflowRoot',
+    'actualWorkflowLanguage',
+    'actualWorkflowLanguageVersion',
+];
+
 const Workflow = ({
     match: {
         params: { uuid },
     },
 }) => {
     const { authorizedFetch } = useAuth0();
-    const { apiVersion } = useApi();
+    const { apiVersion, setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Workflow Details'));
+
     const [metadata, setMetadata] = useState({});
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
@@ -36,6 +49,9 @@ const Workflow = ({
                 setMetadata(res);
             })
             .catch((err) => console.log(err));
+    }, [authorizedFetch, apiVersion, uuid]);
+
+    useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/timing`)
             .then((res) => res.text())
             .then((res) => {
@@ -54,16 +70,6 @@ const Workflow = ({
             })
             .catch((err) => console.log(err));
     }, [authorizedFetch, apiVersion, uuid]);
-    const basicMetadataFields = [
-        'id',
-        'workflowName',
-        'submission',
-        'start',
-        'end',
-        'workflowRoot',
-        'actualWorkflowLanguage',
-        'actualWorkflowLanguageVersion',
-    ];
 
     return (
         <React.Fragment>

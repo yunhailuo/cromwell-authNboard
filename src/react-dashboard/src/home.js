@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserTile, useAuth0 } from './auth';
-import { useApi } from './App';
+import { useApp } from './App';
 import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
@@ -37,7 +37,8 @@ const useStyles = makeStyles((theme) => ({
 
 const Home = () => {
     const { authorizedFetch } = useAuth0();
-    const { apiVersion } = useApi();
+    const { apiVersion, setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Cromwell Dashboard'));
 
     const classes = useStyles();
     const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
@@ -50,6 +51,7 @@ const Home = () => {
             .then((res) => setEngineStatus(res))
             .catch((err) => console.log(err));
     }, [authorizedFetch, enginUrl]);
+
     const [workflowSummary, setWorkflowSummary] = useState({});
     const queryUrl = `/api/workflows/${apiVersion}/query`;
     useEffect(() => {

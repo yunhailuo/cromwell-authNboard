@@ -1,6 +1,5 @@
 import React from 'react';
 import { Switch, Route } from 'react-router-dom';
-import Typography from '@material-ui/core/Typography';
 import { LogInOut, PrivateRoute } from './auth';
 import Home from './home';
 import { WorkflowList, Workflow, SubmitWorkflow } from './workflows';
@@ -24,25 +23,9 @@ const Main = () => (
                 <WorkflowList />
             </PrivateRoute>
             <Route path="/workflows/version" exact>
-                <Typography
-                    component="h2"
-                    variant="h6"
-                    color="primary"
-                    gutterBottom
-                >
-                    Submit a Workflow (Construction in progress)
-                </Typography>
                 <SubmitWorkflow />
             </Route>
             <PrivateRoute path="/womtool/version/describe" exact>
-                <Typography
-                    component="h2"
-                    variant="h6"
-                    color="primary"
-                    gutterBottom
-                >
-                    Workflow Object Model (WOM) tool
-                </Typography>
                 <WomTool />
             </PrivateRoute>
             <PrivateRoute path="/swagger" exact>

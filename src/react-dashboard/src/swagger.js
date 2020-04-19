@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth0 } from './auth';
+import { useApp } from './App';
 import SwaggerUI from 'swagger-ui';
 // not declared dependency; swagger-ui uses the following to load YAML spec
 import YAML from 'js-yaml';
@@ -9,6 +10,8 @@ import Box from '@material-ui/core/Box';
 const ApiDoc = () => {
     const apiDocContainer = useRef();
     const { authorizedFetch } = useAuth0();
+    const { setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Cromwell API reference'));
 
     useEffect(() => {
         authorizedFetch('/swagger/cromwell.yaml')

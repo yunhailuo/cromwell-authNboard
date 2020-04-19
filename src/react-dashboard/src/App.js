@@ -87,12 +87,13 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const ApiContext = React.createContext({ apiVersion: 'v1' });
-export const useApi = () => useContext(ApiContext);
+const AppContext = React.createContext({ apiVersion: 'v1' });
+export const useApp = () => useContext(AppContext);
 
 export const App = () => {
     const { loading, isAuthenticated, authorizedFetch } = useAuth0();
     const classes = useStyles();
+
     const [open, setOpen] = useState(false);
     const handleDrawerOpen = () => {
         setOpen(true);
@@ -112,11 +113,13 @@ export const App = () => {
         }
     }, [isAuthenticated, authorizedFetch]);
 
+    const [appBarTitle, setAppBarTitle] = useState('Cromwell Dashboard');
+
     if (loading) {
         return <CircularProgress />;
     }
     return (
-        <ApiContext.Provider value={{ apiVersion }}>
+        <AppContext.Provider value={{ apiVersion, setAppBarTitle }}>
             <div className={`App ${classes.root}`}>
                 <CssBaseline />
                 <AppBar position="absolute" className={classes.appBar}>
@@ -141,7 +144,7 @@ export const App = () => {
                             noWrap
                             className={classes.title}
                         >
-                            Cromwell Dashboard
+                            {appBarTitle}
                         </Typography>
                         <LogInOut />
                     </Toolbar>
@@ -154,7 +157,7 @@ export const App = () => {
                     </Container>
                 </main>
             </div>
-        </ApiContext.Provider>
+        </AppContext.Provider>
     );
 };
 

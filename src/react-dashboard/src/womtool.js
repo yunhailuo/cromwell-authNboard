@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from './auth';
-import { useApi } from './App';
+import { useApp } from './App';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import FormControl from '@material-ui/core/FormControl';
@@ -37,9 +37,10 @@ const workflowTypeVersionMap = {
 const WomTool = () => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
+    const { apiVersion, setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Workflow Object Model (WOM) tool'));
 
     // Parameters in form
-    const { apiVersion } = useApi();
     const [workflowType, setWorkflowType] = useState('WDL');
     const [workflowTypeVersion, setWorkflowTypeVersion] = useState(
         workflowTypeVersionMap[workflowType][0],
