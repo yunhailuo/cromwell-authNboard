@@ -2,48 +2,54 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth0 } from '../auth';
 import { useApp } from '../App';
+import {
+    WindowScroller,
+    AutoSizer,
+    Column,
+    Table,
+    SortDirection,
+} from 'react-virtualized';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import TableContainer from '@material-ui/core/TableContainer';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableSortLabel from '@material-ui/core/TableSortLabel';
-import TableRow from '@material-ui/core/TableRow';
-import TablePagination from '@material-ui/core/TablePagination';
 import LinkStyle from '@material-ui/core/Link';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import TableCell from '@material-ui/core/TableCell';
+import TableSortLabel from '@material-ui/core/TableSortLabel';
 
 const useStyles = makeStyles((theme) => ({
-    paper: {
-        width: '100%',
-        marginBottom: theme.spacing(2),
+    flexContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        boxSizing: 'border-box',
     },
-    visuallyHidden: {
-        border: 0,
-        clip: 'rect(0 0 0 0)',
-        height: 1,
-        margin: -1,
-        overflow: 'hidden',
-        padding: 0,
-        position: 'absolute',
-        top: 20,
-        width: 1,
+    tableRowHover: {
+        '&:hover': {
+            backgroundColor: theme.palette.grey[200],
+        },
+    },
+    tableCell: {
+        flex: 1,
     },
 }));
 
-const createDefaultComparator = (property) => (a, b, direction = 'desc') => {
+const defaultSortDirection = SortDirection.DESC;
+
+const createDefaultComparator = (property) => (
+    a,
+    b,
+    sortDirection = SortDirection.DESC,
+) => {
     const descOrder = a[property] > b[property] ? -1 : 1;
-    return direction === 'desc' ? descOrder : -descOrder;
+    return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
 
-const numberComparator = (a, b, direction = 'desc') => {
+const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
     if (isNaN(a) && !isNaN(b)) return 1;
     if (!isNaN(a) && isNaN(b)) return -1;
     if (isNaN(a) && isNaN(b)) return 0;
     const descOrder = Math.sign(b - a);
-    return direction === 'desc' ? descOrder : -descOrder;
+    return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
 
 const getTimeString = (milliseconds) => {
@@ -68,10 +74,10 @@ const workflowColumns = {
                 </LinkStyle>
             );
         },
+        width: 200,
     },
     name: {
         label: 'Name',
-        getValue: (workflow) => workflow.name,
     },
     submission: {
         label: 'Submitted',
@@ -79,15 +85,15 @@ const workflowColumns = {
             workflow.submission
                 ? new Date(workflow.submission).toLocaleString()
                 : null,
-        comparator: (a, b, direction = 'desc') =>
+        comparator: (a, b, sortDirection = SortDirection.DESC) =>
             numberComparator(
                 Date.parse(a.submission),
                 Date.parse(b.submission),
-                direction,
+                sortDirection,
             ),
     },
     waiting: {
-        label: 'Waiting time',
+        label: 'Waited',
         display: (workflow) =>
             workflow.start && workflow.submission
                 ? getTimeString(
@@ -95,30 +101,34 @@ const workflowColumns = {
                           Date.parse(workflow.submission),
                 )
                 : null,
-        comparator: (a, b, direction = 'desc') =>
+        comparator: (a, b, sortDirection = SortDirection.DESC) =>
             numberComparator(
                 Date.parse(a.start) - Date.parse(a.submission),
                 Date.parse(b.start) - Date.parse(b.submission),
-                direction,
+                sortDirection,
             ),
     },
     start: {
         label: 'Start',
         display: (workflow) =>
             workflow.start ? new Date(workflow.start).toLocaleString() : null,
-        comparator: (a, b, direction = 'desc') =>
+        comparator: (a, b, sortDirection = SortDirection.DESC) =>
             numberComparator(
                 Date.parse(a.start),
                 Date.parse(b.start),
-                direction,
+                sortDirection,
             ),
     },
     end: {
         label: 'End',
         display: (workflow) =>
             workflow.end ? new Date(workflow.end).toLocaleString() : null,
-        comparator: (a, b, direction = 'desc') =>
-            numberComparator(Date.parse(a.end), Date.parse(b.end), direction),
+        comparator: (a, b, sortDirection = SortDirection.DESC) =>
+            numberComparator(
+                Date.parse(a.end),
+                Date.parse(b.end),
+                sortDirection,
+            ),
     },
     elapse: {
         label: 'Elapse',
@@ -128,73 +138,22 @@ const workflowColumns = {
                     Date.parse(workflow.end) - Date.parse(workflow.start),
                 )
                 : null,
-        comparator: (a, b, direction = 'desc') =>
+        comparator: (a, b, sortDirection = SortDirection.DESC) =>
             numberComparator(
                 Date.parse(a.end) - Date.parse(a.start),
                 Date.parse(b.end) - Date.parse(b.start),
-                direction,
+                sortDirection,
             ),
     },
     status: {
         label: 'Status',
-        getValue: (workflow) => workflow.status,
     },
     metadataArchiveStatus: {
-        label: 'Metadata Archive Status',
-        getValue: (workflow) => workflow.metadataArchiveStatus,
+        label: 'Metadata Archive',
     },
 };
 
-function stableSort(array, comparator, direction = 'desc') {
-    const stabilizedThis = array.map((el, index) => [el, index]);
-    stabilizedThis.sort(
-        (a, b) => comparator(a[0], b[0], direction) || a[1] - b[1],
-    );
-    return stabilizedThis.map((el) => el[0]);
-}
-
-const WorkflowTableHead = ({ classes, order, orderBy, onRequestSort }) => {
-    const createSortHandler = (property) => (event) => {
-        onRequestSort(event, property);
-    };
-
-    return (
-        <TableHead>
-            <TableRow>
-                {Object.keys(workflowColumns).map((colKey) => (
-                    <TableCell
-                        key={colKey}
-                        sortDirection={orderBy === colKey ? order : false}
-                    >
-                        <TableSortLabel
-                            active={orderBy === colKey}
-                            direction={orderBy === colKey ? order : 'desc'}
-                            onClick={createSortHandler(colKey)}
-                        >
-                            <strong>{workflowColumns[colKey].label}</strong>
-                            {orderBy === colKey ? (
-                                <span className={classes.visuallyHidden}>
-                                    {order === 'desc'
-                                        ? 'sorted descending'
-                                        : 'sorted ascending'}
-                                </span>
-                            ) : null}
-                        </TableSortLabel>
-                    </TableCell>
-                ))}
-            </TableRow>
-        </TableHead>
-    );
-};
-
-WorkflowTableHead.propTypes = {
-    classes: PropTypes.object.isRequired,
-    onRequestSort: PropTypes.func.isRequired,
-    order: PropTypes.oneOf(['asc', 'desc']).isRequired,
-    orderBy: PropTypes.string.isRequired,
-};
-
-const WorkflowTable = () => {
+const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
@@ -210,97 +169,140 @@ const WorkflowTable = () => {
             .finally(() => setLoadingWorkflows(false));
     }, [authorizedFetch, apiVersion]);
 
-    const [order, setOrder] = React.useState('desc');
-    const [orderBy, setOrderBy] = React.useState('submission');
-    const [page, setPage] = React.useState(0);
-    const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
-    const handleRequestSort = (event, property) => {
-        const isAsc = orderBy !== property || order === 'asc';
-        setOrder(isAsc ? 'desc' : 'asc');
-        setOrderBy(property);
-    };
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    const emptyRows =
-        rowsPerPage -
-        Math.min(rowsPerPage, workflows.length - page * rowsPerPage);
-
-    return workflows.length > 0 ? (
-        <React.Fragment>
-            <TablePagination
-                rowsPerPageOptions={[5, 10, 25, { value: -1, label: 'All' }]}
+    const headerRenderer = ({ label, dataKey, sortBy, sortDirection }) => {
+        return (
+            <TableCell
                 component="div"
-                count={workflows.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onChangePage={handleChangePage}
-                onChangeRowsPerPage={handleChangeRowsPerPage}
-            />
-            <TableContainer>
-                <Table size="medium">
-                    <WorkflowTableHead
-                        classes={classes}
-                        order={order}
-                        orderBy={orderBy}
-                        onRequestSort={handleRequestSort}
-                    />
-                    <TableBody>
-                        {stableSort(
-                            workflows,
-                            workflowColumns[orderBy].comparator ||
-                                createDefaultComparator(orderBy),
-                            order,
-                        )
-                            .slice(
-                                page * rowsPerPage,
-                                page * rowsPerPage + rowsPerPage,
-                            )
-                            .map((workflow) => (
-                                <TableRow hover key={workflow.id}>
-                                    {Object.keys(workflowColumns).map(
-                                        (colKey) => (
-                                            <TableCell key={colKey}>
-                                                {workflowColumns[colKey].display
-                                                    ? workflowColumns[
-                                                        colKey
-                                                    ].display(workflow)
-                                                    : workflowColumns[colKey]
-                                                        .getValue
-                                                        ? workflowColumns[
-                                                            colKey
-                                                        ].getValue(workflow)
-                                                        : null}
-                                            </TableCell>
-                                        ),
-                                    )}
-                                </TableRow>
-                            ))}
-                        {emptyRows > 0 && (
-                            <TableRow style={{ height: 53 * emptyRows }}>
-                                <TableCell
-                                    colSpan={
-                                        Object.keys(workflowColumns).length
-                                    }
-                                />
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </React.Fragment>
-    ) : loadingWorkflows ? (
+                className={clsx(classes.tableCell, classes.flexContainer)}
+                variant="head"
+                style={{ height: headerHeight }}
+                align="left"
+                sortDirection={sortDirection.toLowerCase()}
+            >
+                <TableSortLabel
+                    active={sortBy === dataKey}
+                    direction={
+                        sortBy === dataKey
+                            ? sortDirection.toLowerCase()
+                            : defaultSortDirection.toLowerCase()
+                    }
+                >
+                    <strong>{label}</strong>
+                </TableSortLabel>
+            </TableCell>
+        );
+    };
+    headerRenderer.propTypes = {
+        label: PropTypes.string.isRequired,
+        dataKey: PropTypes.string.isRequired,
+        sortBy: PropTypes.string.isRequired,
+        sortDirection: PropTypes.oneOf([SortDirection.ASC, SortDirection.DESC])
+            .isRequired,
+    };
+
+    const cellDataGetter = ({ dataKey, rowData }) => {
+        return workflowColumns[dataKey].getData
+            ? workflowColumns[dataKey].getData(rowData)
+            : rowData[dataKey];
+    };
+    cellDataGetter.propTypes = {
+        dataKey: PropTypes.string.isRequired,
+        rowData: PropTypes.object.isRequired,
+    };
+
+    const cellRenderer = ({ dataKey, rowData, cellData }) => {
+        return (
+            <TableCell
+                component="div"
+                className={clsx(classes.tableCell, classes.flexContainer)}
+                variant="body"
+                style={{ height: rowHeight }}
+                align="left"
+            >
+                {workflowColumns[dataKey].display
+                    ? workflowColumns[dataKey].display(rowData)
+                    : cellData}
+            </TableCell>
+        );
+    };
+    cellRenderer.propTypes = {
+        dataKey: PropTypes.string.isRequired,
+        rowData: PropTypes.object.isRequired,
+        cellData: PropTypes.any,
+    };
+
+    const [sortBy, setSortBy] = useState();
+    const [sortDirection, setSortDirection] = useState(defaultSortDirection);
+    const workflowSort = ({ sortBy, sortDirection }) => {
+        setSortBy(sortBy);
+        setSortDirection(sortDirection);
+        const stabilizedWorkflows = workflows.map((el, index) => [el, index]);
+        const comparator =
+            workflowColumns[sortBy].comparator ||
+            createDefaultComparator(sortBy);
+        stabilizedWorkflows.sort(
+            (a, b) => comparator(a[0], b[0], sortDirection) || a[1] - b[1],
+        );
+        setWorkflows(stabilizedWorkflows.map((el) => el[0]));
+    };
+
+    return loadingWorkflows ? (
         <CircularProgress />
+    ) : workflows.length < 1 ? (
+        <span>No workflow found.</span>
     ) : (
-        <div>No workflows found.</div>
+        <WindowScroller>
+            {({ height }) => (
+                <AutoSizer disableHeight>
+                    {({ width }) => (
+                        <Table
+                            rowCount={workflows.length}
+                            rowGetter={({ index }) => workflows[index]}
+                            height={height - 128}
+                            width={width}
+                            rowHeight={rowHeight}
+                            gridStyle={{
+                                direction: 'inherit',
+                            }}
+                            headerHeight={headerHeight}
+                            rowClassName={clsx(
+                                classes.flexContainer,
+                                classes.tableRowHover,
+                            )}
+                            sort={workflowSort}
+                            sortBy={sortBy}
+                            sortDirection={sortDirection}
+                        >
+                            {Object.keys(workflowColumns).map((colKey) => {
+                                return (
+                                    <Column
+                                        key={colKey}
+                                        headerRenderer={headerRenderer}
+                                        className={classes.flexContainer}
+                                        cellRenderer={cellRenderer}
+                                        cellDataGetter={cellDataGetter}
+                                        dataKey={colKey}
+                                        width={
+                                            workflowColumns[colKey].width || 150
+                                        }
+                                        label={
+                                            workflowColumns[colKey].label || ''
+                                        }
+                                        defaultSortDirection={
+                                            defaultSortDirection
+                                        }
+                                    />
+                                );
+                            })}
+                        </Table>
+                    )}
+                </AutoSizer>
+            )}
+        </WindowScroller>
     );
+};
+WorkflowTable.propTypes = {
+    headerHeight: PropTypes.number,
+    rowHeight: PropTypes.number,
 };
 export default WorkflowTable;
