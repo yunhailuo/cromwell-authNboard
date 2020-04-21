@@ -3,14 +3,27 @@ import PropTypes from 'prop-types';
 import { useAuth0 } from '../auth';
 import { useApp } from '../App';
 import { getTimeString } from '../utils';
+import { makeStyles } from '@material-ui/core/styles';
+import GetAppIcon from '@material-ui/icons/GetApp';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableRow from '@material-ui/core/TableRow';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
 import Divider from '@material-ui/core/Divider';
 import LinkStyle from '@material-ui/core/Link';
+
+const useStyles = makeStyles((theme) => ({
+    subtitle: {
+        marginTop: theme.spacing(2),
+    },
+    alignedIcon: {
+        position: 'relative',
+        top: 5,
+    },
+}));
 
 const metadataPresentation = {
     workflowLanguage: {
@@ -48,9 +61,11 @@ const metadataPresentation = {
     },
     zones: {
         label: 'Machine zones',
+        getData: (metadata) => metadata.zones.join(', '),
     },
     machineTypes: {
         label: 'Machine types used',
+        getData: (metadata) => metadata.machineTypes.join(', '),
     },
     cpuHours: {
         label: 'Total CPU hours',
@@ -79,6 +94,10 @@ const distillCallMetadata = (metadata) => {
             const end = new Date(subWorkflowMetadata.end);
             if (isNaN(start) || isNaN(end)) {
                 timeError = `Missing start/end time for ${callName}`;
+            } else if (!subWorkflowMetadata.runtimeAttributes) {
+                const error = `Missing runtime attributes for ${callName}`;
+                cpuError = error;
+                memoryError = error;
             } else {
                 const cpuCount =
                     subWorkflowMetadata.runtimeAttributes.cpu ||
@@ -100,18 +119,16 @@ const distillCallMetadata = (metadata) => {
                         (memorySize * (end - start)) / 1000 / 60 / 60;
                 }
             }
-            if (
-                subWorkflowMetadata.jes &&
-                subWorkflowMetadata.jes.machineType
-            ) {
-                machineTypes.add(subWorkflowMetadata.jes.machineType);
+            if (subWorkflowMetadata.jes) {
+                machineTypes.add(
+                    subWorkflowMetadata.jes.machineType || 'unknown',
+                );
+                zones.add(subWorkflowMetadata.jes.zone || 'unknown');
+            } else {
+                machineTypes.add('N/A');
+                zones.add('N/A');
             }
-            if (subWorkflowMetadata.jes && subWorkflowMetadata.jes.zone) {
-                zones.add(subWorkflowMetadata.jes.zone);
-            }
-            if (subWorkflowMetadata.backend) {
-                backends.add(subWorkflowMetadata.backend);
-            }
+            backends.add(subWorkflowMetadata.backend || 'unknown');
         });
     });
     return {
@@ -126,11 +143,50 @@ const distillCallMetadata = (metadata) => {
     };
 };
 
+const SimpleObjectTable = ({ obj }) => (
+    <Table size="small">
+        <TableBody>
+            {Object.keys(obj)
+                .filter((k) => obj[k] && obj[k].length > 0)
+                .sort()
+                .map((k) =>
+                    Array.isArray(obj[k]) ? (
+                        obj[k].map((element, index) => (
+                            <TableRow key={index}>
+                                {index === 0 ? (
+                                    <TableCell
+                                        component="th"
+                                        scope="row"
+                                        rowSpan={obj[k].length}
+                                    >
+                                        <strong>{k}:</strong>
+                                    </TableCell>
+                                ) : null}
+                                <TableCell>{element}</TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow key={k}>
+                            <TableCell component="th" scope="row">
+                                <strong>{k}:</strong>
+                            </TableCell>
+                            <TableCell>{obj[k]}</TableCell>
+                        </TableRow>
+                    ),
+                )}
+        </TableBody>
+    </Table>
+);
+SimpleObjectTable.propTypes = {
+    obj: PropTypes.object.isRequired,
+};
+
 const Workflow = ({
     match: {
         params: { uuid },
     },
 }) => {
+    const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
     useEffect(() => setAppBarTitle('Workflow Details'), [setAppBarTitle]);
@@ -142,6 +198,7 @@ const Workflow = ({
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then((res) => res.json())
             .then((res) => {
+                setAppBarTitle(`${res.workflowName} (${uuid}): ${res.status}`);
                 const enhancedMetadata = {
                     ...res,
                     ...distillCallMetadata(res),
@@ -153,10 +210,10 @@ const Workflow = ({
                 );
                 setMetadataDownloadUrl(downloadUrl);
                 setMetadata(enhancedMetadata);
-                setLoadingMetadata(false);
             })
             .catch((err) => console.error(err))
-    }, [authorizedFetch, apiVersion, uuid]);
+            .finally(() => setLoadingMetadata(false));
+    }, [authorizedFetch, apiVersion, uuid, setAppBarTitle]);
 
     useEffect(() => {
         if (!metadata) {
@@ -185,122 +242,115 @@ const Workflow = ({
         <CircularProgress />
     ) : !metadata ? null : (
         <React.Fragment>
-            <Typography
-                component="h2"
-                variant="h6"
-                color="primary"
-                gutterBottom
-            >
-                {metadata.workflowName} ({uuid}): {metadata.status}
-            </Typography>
             {/* Basic info */}
-            <List dense>
-                {Object.keys(metadataPresentation).map((k) => (
-                    <ListItem key={k}>
-                        <ListItemText>
-                            <strong>
-                                {metadataPresentation[k].label || k}
-                            </strong>
-                            {`: ${
-                                metadataPresentation[k].getData
-                                    ? metadataPresentation[k].getData(metadata)
-                                    : metadata[k]
-                            }`}
-                        </ListItemText>
-                    </ListItem>
-                ))}
-                {metadataDownloadUrl ? (
-                    <ListItem>
+            <Typography component="h4" variant="h6" color="secondary">
+                <Box textAlign="left">
+                    <span>Metadata</span>
+                    {metadataDownloadUrl ? (
                         <LinkStyle
                             download="metadata.json"
                             href={metadataDownloadUrl}
                         >
-                            Download metadata.json
+                            <GetAppIcon className={classes.alignedIcon} />
                         </LinkStyle>
-                    </ListItem>
-                ) : null}
-            </List>
-            <Divider />
+                    ) : null}
+                </Box>
+            </Typography>
+            <Table size="small">
+                <TableBody>
+                    {Object.keys(metadataPresentation).map((k) => (
+                        <TableRow key={k}>
+                            <TableCell component="th" scope="row">
+                                <strong>
+                                    {metadataPresentation[k].label || k}:
+                                </strong>
+                            </TableCell>
+                            <TableCell>
+                                {metadataPresentation[k].getData
+                                    ? metadataPresentation[k].getData(metadata)
+                                    : metadata[k]}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
             {/* Execution time */}
-            <Typography component="h4" variant="h6" color="secondary">
+            <Typography
+                component="h4"
+                variant="h6"
+                color="secondary"
+                className={classes.subtitle}
+            >
                 <Box textAlign="left">Execution time</Box>
             </Typography>
             <div id="chart_div" />
             <Divider />
             {/* Labels */}
-            <Typography component="h4" variant="h6" color="secondary">
+            <Typography
+                component="h4"
+                variant="h6"
+                color="secondary"
+                className={classes.subtitle}
+            >
                 <Box textAlign="left">Labels</Box>
             </Typography>
-            <List dense>
-                {metadata.labels && Object.keys(metadata.labels).length > 0 ? (
-                    Object.keys(metadata.labels)
-                        .sort()
-                        .map((k) => (
-                            <ListItem key={k}>
-                                <ListItemText>
-                                    <strong>{k}</strong>
-                                    {`: ${metadata.labels[k]}`}
-                                </ListItemText>
-                            </ListItem>
-                        ))
-                ) : (
-                    <ListItem>
-                        <ListItemText primary="No labels" />
-                    </ListItem>
-                )}
-            </List>
-            <Divider />
+            {metadata.labels && Object.keys(metadata.labels).length > 0 ? (
+                <SimpleObjectTable obj={metadata.labels} />
+            ) : (
+                <Table size="small">
+                    <TableBody>
+                        <TableRow>
+                            <TableCell component="th" scope="row" colSpan={2}>
+                                No labels
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            )}
             {/* Inputs */}
-            <Typography component="h4" variant="h6" color="secondary">
+            <Typography
+                component="h4"
+                variant="h6"
+                color="secondary"
+                className={classes.subtitle}
+            >
                 <Box textAlign="left">Inputs</Box>
             </Typography>
-            <List dense>
-                {metadata.inputs && Object.keys(metadata.inputs).length > 0 ? (
-                    Object.keys(metadata.inputs)
-                        .filter(
-                            (k) =>
-                                metadata.inputs[k] &&
-                                metadata.inputs[k].length > 0,
-                        )
-                        .sort()
-                        .map((k) => (
-                            <ListItem key={k}>
-                                <ListItemText>
-                                    <strong>{k}</strong>
-                                    {`: ${metadata.inputs[k]}`}
-                                </ListItemText>
-                            </ListItem>
-                        ))
-                ) : (
-                    <ListItem>
-                        <ListItemText primary="No inputs" />
-                    </ListItem>
-                )}
-            </List>
-            <Divider />
+            {metadata.inputs && Object.keys(metadata.inputs).length > 0 ? (
+                <SimpleObjectTable obj={metadata.inputs} />
+            ) : (
+                <Table size="small">
+                    <TableBody>
+                        <TableRow>
+                            <TableCell component="th" scope="row" colSpan={2}>
+                                No inputs
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            )}
             {/* Outputs */}
-            <Typography component="h4" variant="h6" color="secondary">
+            <Typography
+                component="h4"
+                variant="h6"
+                color="secondary"
+                className={classes.subtitle}
+            >
                 <Box textAlign="left">Outputs</Box>
             </Typography>
-            <List dense>
-                {metadata.outputs &&
-                Object.keys(metadata.outputs).length > 0 ? (
-                        Object.keys(metadata.outputs)
-                            .sort()
-                            .map((k) => (
-                                <ListItem key={k}>
-                                    <ListItemText>
-                                        <strong>{k}</strong>
-                                        {`: ${metadata.outputs[k]}`}
-                                    </ListItemText>
-                                </ListItem>
-                            ))
-                    ) : (
-                        <ListItem>
-                            <ListItemText primary="No outputs" />
-                        </ListItem>
-                    )}
-            </List>
+            {metadata.outputs && Object.keys(metadata.outputs).length > 0 ? (
+                <SimpleObjectTable obj={metadata.outputs} />
+            ) : (
+                <Table size="small">
+                    <TableBody>
+                        <TableRow>
+                            <TableCell component="th" scope="row" colSpan={2}>
+                                No outputs
+                            </TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            )}
         </React.Fragment>
     );
 };
