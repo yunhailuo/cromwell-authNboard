@@ -156,10 +156,13 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/query`)
             .then((res) => res.json())
-            .then((res) => setWorkflows(res.results))
+            .then((res) => {
+                setAppBarTitle(`${res.results.length} workflows`);
+                setWorkflows(res.results);
+            })
             .catch((err) => console.error(err))
             .finally(() => setLoadingWorkflows(false));
-    }, [authorizedFetch, apiVersion]);
+    }, [authorizedFetch, apiVersion, setAppBarTitle]);
 
     const headerRenderer = ({ label, dataKey, sortBy, sortDirection }) => {
         return (
