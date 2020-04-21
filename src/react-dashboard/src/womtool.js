@@ -38,7 +38,9 @@ const WomTool = () => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Workflow Object Model (WOM) tool'));
+    useEffect(() => setAppBarTitle('Workflow Object Model (WOM) tool'), [
+        setAppBarTitle,
+    ]);
 
     // Parameters in form
     const [workflowType, setWorkflowType] = useState('WDL');

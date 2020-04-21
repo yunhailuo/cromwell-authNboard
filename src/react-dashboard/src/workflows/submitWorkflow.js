@@ -38,8 +38,9 @@ const SubmitWorkflow = () => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() =>
-        setAppBarTitle('Submit a Workflow (Construction in progress)'),
+    useEffect(
+        () => setAppBarTitle('Submit a Workflow (Construction in progress)'),
+        [setAppBarTitle],
     );
 
     // Parameters in form

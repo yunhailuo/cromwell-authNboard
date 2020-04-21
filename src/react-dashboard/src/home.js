@@ -38,7 +38,7 @@ const useStyles = makeStyles((theme) => ({
 const Home = () => {
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Cromwell Dashboard'));
+    useEffect(() => setAppBarTitle('Cromwell Dashboard'), [setAppBarTitle]);
 
     const classes = useStyles();
     const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);

@@ -149,7 +149,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Workflows'));
+    useEffect(() => setAppBarTitle('Workflows'), [setAppBarTitle]);
 
     const [loadingWorkflows, setLoadingWorkflows] = useState(true);
     const [workflows, setWorkflows] = useState([]);

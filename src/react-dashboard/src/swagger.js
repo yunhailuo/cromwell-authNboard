@@ -11,7 +11,7 @@ const ApiDoc = () => {
     const apiDocContainer = useRef();
     const { authorizedFetch } = useAuth0();
     const { setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Cromwell API reference'));
+    useEffect(() => setAppBarTitle('Cromwell API reference'), [setAppBarTitle]);
 
     useEffect(() => {
         authorizedFetch('/swagger/cromwell.yaml')

@@ -133,7 +133,7 @@ const Workflow = ({
 }) => {
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Workflow Details'));
+    useEffect(() => setAppBarTitle('Workflow Details'), [setAppBarTitle]);
 
     const [loadingMetadata, setLoadingMetadata] = useState(true);
     const [metadata, setMetadata] = useState();
