@@ -10,6 +10,7 @@ import {
     SortDirection,
 } from 'react-virtualized';
 import { Link } from 'react-router-dom';
+import { getTimeString } from '../utils';
 import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import LinkStyle from '@material-ui/core/Link';
@@ -50,15 +51,6 @@ const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
     if (isNaN(a) && isNaN(b)) return 0;
     const descOrder = Math.sign(b - a);
     return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
-};
-
-const getTimeString = (milliseconds) => {
-    const seconds = milliseconds / 1000;
-    const minutes = seconds / 60;
-    if (minutes < 1) return seconds.toFixed(1) + ' sec';
-    const hours = minutes / 60;
-    if (hours < 1) return minutes.toFixed(1) + ' min';
-    return hours.toFixed(1) + ' hr';
 };
 
 const workflowColumns = {

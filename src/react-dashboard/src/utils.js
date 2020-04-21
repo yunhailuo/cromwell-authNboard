@@ -55,3 +55,12 @@ SingleFileUpload.propTypes = {
     inputRef: refType.isRequired,
     accept: PropTypes.string,
 };
+
+export const getTimeString = (milliseconds) => {
+    const seconds = milliseconds / 1000;
+    const minutes = seconds / 60;
+    if (minutes < 1) return seconds.toFixed(1) + ' sec';
+    const hours = minutes / 60;
+    if (hours < 1) return minutes.toFixed(1) + ' min';
+    return hours.toFixed(1) + ' hr';
+};
