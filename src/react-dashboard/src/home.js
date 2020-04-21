@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UserTile, useAuth0 } from './auth';
-import { useApp } from './App';
-import clsx from 'clsx';
-import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import Paper from '@material-ui/core/Paper';
+import Typography from '@material-ui/core/Typography';
+import clsx from 'clsx';
+import { makeStyles } from '@material-ui/core/styles';
+import { useApp } from './App';
 
 const useStyles = makeStyles((theme) => ({
     container: {

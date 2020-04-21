@@ -1,11 +1,11 @@
+import 'swagger-ui/dist/swagger-ui.css';
 import React, { useEffect, useRef } from 'react';
-import { useAuth0 } from './auth';
-import { useApp } from './App';
+import Box from '@material-ui/core/Box';
 import SwaggerUI from 'swagger-ui';
 // not declared dependency; swagger-ui uses the following to load YAML spec
 import YAML from 'js-yaml';
-import 'swagger-ui/dist/swagger-ui.css';
-import Box from '@material-ui/core/Box';
+import { useApp } from './App';
+import { useAuth0 } from './auth';
 
 const ApiDoc = () => {
     const apiDocContainer = useRef();

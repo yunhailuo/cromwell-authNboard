@@ -1,6 +1,6 @@
-import WorkflowTable from './workflowTable';
-import Workflow from './workflow';
 import SubmitWorkflow from './submitWorkflow';
+import Workflow from './workflow';
+import WorkflowTable from './workflowTable';
 
 export { WorkflowTable };
 export { Workflow };

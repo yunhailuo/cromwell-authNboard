@@ -27,6 +27,7 @@ module.exports = {
         quotes: ['error', 'single'],
         semi: ['error', 'always'],
         'arrow-parens': ['error', 'always'],
+        'sort-imports': 'error',
 
         // override default options for rules from base configurations
         'comma-dangle': ['error', 'always-multiline'],

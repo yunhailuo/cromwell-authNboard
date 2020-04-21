@@ -1,11 +1,11 @@
+import './index.css';
+import * as serviceWorker from './serviceWorker';
+import { App } from './App';
+import { Auth0Provider } from './auth';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
 import { BrowserRouter as Router } from 'react-router-dom';
 import config from './dashboard_config.json';
-import { App } from './App';
-import * as serviceWorker from './serviceWorker';
-import { Auth0Provider } from './auth';
 
 ReactDOM.render(
     <React.StrictMode>

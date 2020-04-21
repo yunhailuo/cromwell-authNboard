@@ -1,10 +1,10 @@
-import React from 'react';
-import { Switch, Route } from 'react-router-dom';
 import { LogInOut, PrivateRoute } from './auth';
-import Home from './home';
-import { WorkflowTable, Workflow, SubmitWorkflow } from './workflows';
-import WomTool from './womtool';
+import { Route, Switch } from 'react-router-dom';
+import { SubmitWorkflow, Workflow, WorkflowTable } from './workflows';
 import ApiDoc from './swagger';
+import Home from './home';
+import React from 'react';
+import WomTool from './womtool';
 
 const Main = () => (
     <React.Fragment>

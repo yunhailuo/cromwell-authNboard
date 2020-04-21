@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import PropTypes from 'prop-types';
-import createAuth0Client from '@auth0/auth0-spa-js';
-import config from './dashboard_config.json';
-import history from './history';
-import { Route, Redirect } from 'react-router-dom';
-import clsx from 'clsx';
-import { makeStyles } from '@material-ui/core/styles';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { Redirect, Route } from 'react-router-dom';
+import Avatar from '@material-ui/core/Avatar';
+import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-import Box from '@material-ui/core/Box';
-import Avatar from '@material-ui/core/Avatar';
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogActions from '@material-ui/core/DialogActions';
+import Paper from '@material-ui/core/Paper';
+import PropTypes from 'prop-types';
+import Typography from '@material-ui/core/Typography';
+import clsx from 'clsx';
+import config from './dashboard_config.json';
+import createAuth0Client from '@auth0/auth0-spa-js';
+import history from './history';
+import { makeStyles } from '@material-ui/core/styles';
 
 const INIT_OPTION = {
     domain: config.AUTH0_DOMAIN,
