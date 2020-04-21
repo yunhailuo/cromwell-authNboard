@@ -155,7 +155,7 @@ const Workflow = ({
                 setMetadata(enhancedMetadata);
                 setLoadingMetadata(false);
             })
-            .catch((err) => console.log(err));
+            .catch((err) => console.error(err))
     }, [authorizedFetch, apiVersion, uuid]);
 
     useEffect(() => {
@@ -178,7 +178,7 @@ const Workflow = ({
                     }
                 }
             })
-            .catch((err) => console.log(err));
+            .catch((err) => console.error(err));
     }, [metadata, authorizedFetch, apiVersion, uuid]);
 
     return loadingMetadata ? (

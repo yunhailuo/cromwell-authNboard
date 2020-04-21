@@ -49,7 +49,7 @@ const Home = () => {
         authorizedFetch(enginUrl + '/status', {})
             .then((res) => res.statusText)
             .then((res) => setEngineStatus(res))
-            .catch((err) => console.log(err));
+            .catch((err) => console.error(err));
     }, [authorizedFetch, enginUrl]);
 
     const [workflowSummary, setWorkflowSummary] = useState({});
@@ -68,7 +68,7 @@ const Home = () => {
                 }, {});
                 setWorkflowSummary(summary);
             })
-            .catch((err) => console.log(err));
+            .catch((err) => console.error(err));
     }, [authorizedFetch, queryUrl]);
 
     return (

@@ -24,7 +24,7 @@ const ApiDoc = () => {
                     presets: [SwaggerUI.presets.apis],
                 }),
             )
-            .catch((err) => console.log(err));
+            .catch((err) => console.error(err));
     }, [authorizedFetch, apiDocContainer]);
 
     return <Box textAlign="start" ref={apiDocContainer} />;

@@ -157,7 +157,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         authorizedFetch(`/api/workflows/${apiVersion}/query`)
             .then((res) => res.json())
             .then((res) => setWorkflows(res.results))
-            .catch((err) => console.log(err))
+            .catch((err) => console.error(err))
             .finally(() => setLoadingWorkflows(false));
     }, [authorizedFetch, apiVersion]);
 
