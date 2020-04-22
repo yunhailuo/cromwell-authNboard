@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Divider from '@material-ui/core/Divider';
+import { ExecutionChart } from './execChart';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
@@ -25,62 +26,15 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const metadataPresentation = {
-    workflowLanguage: {
-        label: 'Workflow Language',
-        getData: (metadata) =>
-            `${metadata.actualWorkflowLanguage}${
-                metadata.actualWorkflowLanguageVersion
-                    ? ` (${metadata.actualWorkflowLanguageVersion})`
-                    : ''
-            }`,
-    },
-    submission: {
-        label: 'Submission',
-        getData: (metadata) => new Date(metadata.submission).toLocaleString(),
-    },
-    duration: {
-        label: 'Duration',
-        getData: (metadata) => {
-            const start = new Date(metadata.start);
-            const end = new Date(metadata.end);
-            const startString = isNaN(start) ? '?' : start.toLocaleString();
-            const endString = isNaN(end) ? '?' : end.toLocaleString();
-            const durationPostfix =
-                isNaN(start) || isNaN(end)
-                    ? ''
-                    : ` (${getTimeString(end - start)})`;
-            return `${startString} - ${endString}${durationPostfix}`;
-        },
-    },
-    workflowRoot: {
-        label: 'Workflow Root',
-    },
-    backends: {
-        label: 'Backends',
-    },
-    zones: {
-        label: 'Machine zones',
-        getData: (metadata) => metadata.zones.join(', '),
-    },
-    machineTypes: {
-        label: 'Machine types used',
-        getData: (metadata) => metadata.machineTypes.join(', '),
-    },
-    cpuHours: {
-        label: 'Total CPU hours',
-        getData: (metadata) =>
-            metadata.cpuError || metadata.totalCpuHours.toFixed(2),
-    },
-    memoryHours: {
-        label: 'Total memory GB * hours',
-        getData: (metadata) =>
-            metadata.memoryError || metadata.totalMemoryHours.toFixed(2),
-    },
-};
+const distillMetadata = (metadata) => {
+    const start = new Date(metadata.start);
+    const end = new Date(metadata.end);
+    const startString = isNaN(start) ? '?' : start.toLocaleString();
+    const endString = isNaN(end) ? '?' : end.toLocaleString();
+    const durationPostfix =
+        isNaN(start) || isNaN(end) ? '' : ` (${getTimeString(end - start)})`;
+    const duration = `${startString} - ${endString}${durationPostfix}`;
 
-const distillCallMetadata = (metadata) => {
-    let timeError = '';
     let totalCpuHours = 0;
     let cpuError = '';
     let totalMemoryHours = 0;
@@ -89,19 +43,21 @@ const distillCallMetadata = (metadata) => {
     const zones = new Set();
     const backends = new Set();
     Object.keys(metadata.calls).forEach((callName) => {
-        metadata.calls[callName].forEach((subWorkflowMetadata) => {
-            const start = new Date(subWorkflowMetadata.start);
-            const end = new Date(subWorkflowMetadata.end);
+        metadata.calls[callName].forEach((callShard) => {
+            const start = new Date(callShard.start);
+            const end = new Date(callShard.end);
             if (isNaN(start) || isNaN(end)) {
-                timeError = `Missing start/end time for ${callName}`;
-            } else if (!subWorkflowMetadata.runtimeAttributes) {
+                const error = `Missing start/end time for ${callName}`;
+                cpuError = error;
+                memoryError = error;
+            } else if (!callShard.runtimeAttributes) {
                 const error = `Missing runtime attributes for ${callName}`;
                 cpuError = error;
                 memoryError = error;
             } else {
                 const cpuCount =
-                    subWorkflowMetadata.runtimeAttributes.cpu ||
-                    subWorkflowMetadata.runtimeAttributes.cpuMin;
+                    callShard.runtimeAttributes.cpu ||
+                    callShard.runtimeAttributes.cpuMin;
                 if (isNaN(cpuCount)) {
                     cpuError = `Failed to get number of CPU for ${callName}`;
                 } else {
@@ -109,8 +65,8 @@ const distillCallMetadata = (metadata) => {
                         (cpuCount * (end - start)) / 1000 / 60 / 60;
                 }
                 const memorySize = (
-                    subWorkflowMetadata.runtimeAttributes.memory ||
-                    subWorkflowMetadata.runtimeAttributes.memoryMin
+                    callShard.runtimeAttributes.memory ||
+                    callShard.runtimeAttributes.memoryMin
                 ).replace(' GB', '');
                 if (isNaN(memorySize)) {
                     memoryError = `Failed to get memory in GB for ${callName}`;
@@ -119,27 +75,30 @@ const distillCallMetadata = (metadata) => {
                         (memorySize * (end - start)) / 1000 / 60 / 60;
                 }
             }
-            if (subWorkflowMetadata.jes) {
-                machineTypes.add(
-                    subWorkflowMetadata.jes.machineType || 'unknown',
-                );
-                zones.add(subWorkflowMetadata.jes.zone || 'unknown');
+            if (callShard.jes) {
+                machineTypes.add(callShard.jes.machineType || 'unknown');
+                zones.add(callShard.jes.zone || 'unknown');
             } else {
                 machineTypes.add('N/A');
                 zones.add('N/A');
             }
-            backends.add(subWorkflowMetadata.backend || 'unknown');
+            backends.add(callShard.backend || 'unknown');
         });
     });
     return {
-        timeError,
-        totalCpuHours,
-        cpuError,
-        totalMemoryHours,
-        memoryError,
-        machineTypes: Array.from(machineTypes),
-        zones: Array.from(zones),
-        backends: Array.from(backends),
+        'Workflow Language': `${metadata.actualWorkflowLanguage}${
+            metadata.actualWorkflowLanguageVersion
+                ? ` (${metadata.actualWorkflowLanguageVersion})`
+                : ''
+        }`,
+        Submission: new Date(metadata.submission).toLocaleString(),
+        Duration: duration,
+        'Workflow Root': metadata.workflowRoot,
+        Backends: Array.from(backends).join(', '),
+        'Machine zones': Array.from(zones).join(', '),
+        'Machine types used': Array.from(machineTypes).join(', '),
+        'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
+        'Total memory GB * hours': memoryError || totalMemoryHours.toFixed(2),
     };
 };
 
@@ -194,49 +153,24 @@ const Workflow = ({
     const [loadingMetadata, setLoadingMetadata] = useState(true);
     const [metadata, setMetadata] = useState();
     const [metadataDownloadUrl, setMetadataDownloadUrl] = useState();
+    const [basicMetadata, setBasicMetadata] = useState();
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then((res) => res.json())
             .then((res) => {
                 setAppBarTitle(`${res.workflowName} (${uuid}): ${res.status}`);
-                const enhancedMetadata = {
-                    ...res,
-                    ...distillCallMetadata(res),
-                };
                 const downloadUrl = URL.createObjectURL(
-                    new Blob([JSON.stringify(enhancedMetadata)], {
+                    new Blob([JSON.stringify(res)], {
                         type: 'application/json',
                     }),
                 );
                 setMetadataDownloadUrl(downloadUrl);
-                setMetadata(enhancedMetadata);
+                setBasicMetadata(distillMetadata(res));
+                setMetadata(res);
             })
             .catch((err) => console.error(err))
             .finally(() => setLoadingMetadata(false));
     }, [authorizedFetch, apiVersion, uuid, setAppBarTitle]);
-
-    useEffect(() => {
-        if (!metadata) {
-            return;
-        }
-        authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/timing`)
-            .then((res) => res.text())
-            .then((res) => {
-                const domparser = new DOMParser();
-                let doc = domparser.parseFromString(res, 'text/html');
-                for (let e of doc.scripts) {
-                    if (e.innerHTML.length > 0) {
-                        var script = document.createElement('script');
-                        script.type = 'text/javascript';
-                        script.text = e.text;
-                        document
-                            .getElementById('chart_div')
-                            .appendChild(script);
-                    }
-                }
-            })
-            .catch((err) => console.error(err));
-    }, [metadata, authorizedFetch, apiVersion, uuid]);
 
     return loadingMetadata ? (
         <CircularProgress />
@@ -256,24 +190,7 @@ const Workflow = ({
                     ) : null}
                 </Box>
             </Typography>
-            <Table size="small">
-                <TableBody>
-                    {Object.keys(metadataPresentation).map((k) => (
-                        <TableRow key={k}>
-                            <TableCell component="th" scope="row">
-                                <strong>
-                                    {metadataPresentation[k].label || k}:
-                                </strong>
-                            </TableCell>
-                            <TableCell>
-                                {metadataPresentation[k].getData
-                                    ? metadataPresentation[k].getData(metadata)
-                                    : metadata[k]}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <SimpleObjectTable obj={basicMetadata} />
             {/* Execution time */}
             <Typography
                 component="h4"
@@ -283,7 +200,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Execution time</Box>
             </Typography>
-            <div id="chart_div" />
+            <ExecutionChart metadata={metadata} />
             <Divider />
             {/* Labels */}
             <Typography
