@@ -57,6 +57,7 @@ SingleFileUpload.propTypes = {
 };
 
 export const getTimeString = (milliseconds) => {
+    if (isNaN(milliseconds)) return '';
     const seconds = milliseconds / 1000;
     const minutes = seconds / 60;
     if (minutes < 1) return seconds.toFixed(1) + ' sec';

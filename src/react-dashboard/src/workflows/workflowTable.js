@@ -12,6 +12,7 @@ import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
 import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
+import Tooltip from '@material-ui/core/Tooltip';
 import clsx from 'clsx';
 import { getTimeString } from '../utils';
 import { makeStyles } from '@material-ui/core/styles';
@@ -31,17 +32,22 @@ const useStyles = makeStyles((theme) => ({
     },
     tableCell: {
         flex: 1,
+        width: '100%',
+    },
+    truncated: {
+        display: 'block',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     },
 }));
 
 const defaultSortDirection = SortDirection.DESC;
 
-const createDefaultComparator = (property) => (
-    a,
-    b,
-    sortDirection = SortDirection.DESC,
-) => {
-    const descOrder = a[property] > b[property] ? -1 : 1;
+const defaultComparator = (a, b, sortDirection = SortDirection.DESC) => {
+    if (a && !b) return -1;
+    if (!a && b) return 1;
+    if (!a && !b) return 0;
+    const descOrder = a > b ? -1 : a === b ? 0 : 1;
     return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
 
@@ -53,16 +59,26 @@ const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
     return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
 
+const TruncatedWithTooltip = ({ label }) => {
+    const classes = useStyles();
+
+    return (
+        <Tooltip title={label} className={classes.truncated}>
+            <div>{label}</div>
+        </Tooltip>
+    );
+};
+TruncatedWithTooltip.propTypes = {
+    label: PropTypes.string.isRequired,
+};
+
 const workflowColumns = {
     id: {
         label: 'ID',
-        display: function idDisplay(workflow) {
+        display: function idDisplay(data) {
             return (
-                <LinkStyle
-                    component={Link}
-                    to={`/workflows/version/${workflow.id}`}
-                >
-                    {workflow.id}
+                <LinkStyle component={Link} to={`/workflows/version/${data}`}>
+                    {data}
                 </LinkStyle>
             );
         },
@@ -70,78 +86,53 @@ const workflowColumns = {
     },
     name: {
         label: 'Name',
+        width: 100,
+    },
+    caperStrLabel: {
+        label: 'Caper Label',
+        getData: (workflow) =>
+            (workflow.labels && workflow.labels['caper-str-label']) || '',
+        display: function longStringDisplay(data) {
+            return <TruncatedWithTooltip label={data} />;
+        },
+        width: 150,
     },
     submission: {
         label: 'Submitted',
-        display: (workflow) =>
-            workflow.submission
-                ? new Date(workflow.submission).toLocaleString()
-                : null,
-        comparator: (a, b, sortDirection = SortDirection.DESC) =>
-            numberComparator(
-                Date.parse(a.submission),
-                Date.parse(b.submission),
-                sortDirection,
-            ),
+        getData: (workflow) => Date.parse(workflow.submission),
+        display: (data) => (data ? new Date(data).toLocaleString() : null),
+        comparator: numberComparator,
     },
     waiting: {
         label: 'Waited',
-        display: (workflow) =>
-            workflow.start && workflow.submission
-                ? getTimeString(
-                    Date.parse(workflow.start) -
-                          Date.parse(workflow.submission),
-                )
-                : null,
-        comparator: (a, b, sortDirection = SortDirection.DESC) =>
-            numberComparator(
-                Date.parse(a.start) - Date.parse(a.submission),
-                Date.parse(b.start) - Date.parse(b.submission),
-                sortDirection,
-            ),
+        getData: (workflow) =>
+            Date.parse(workflow.start) - Date.parse(workflow.submission),
+        display: (data) => getTimeString(data),
+        comparator: numberComparator,
+        width: 100,
     },
     start: {
         label: 'Start',
-        display: (workflow) =>
-            workflow.start ? new Date(workflow.start).toLocaleString() : null,
-        comparator: (a, b, sortDirection = SortDirection.DESC) =>
-            numberComparator(
-                Date.parse(a.start),
-                Date.parse(b.start),
-                sortDirection,
-            ),
+        getData: (workflow) => Date.parse(workflow.start),
+        display: (data) => (data ? new Date(data).toLocaleString() : null),
+        comparator: numberComparator,
     },
     end: {
         label: 'End',
-        display: (workflow) =>
-            workflow.end ? new Date(workflow.end).toLocaleString() : null,
-        comparator: (a, b, sortDirection = SortDirection.DESC) =>
-            numberComparator(
-                Date.parse(a.end),
-                Date.parse(b.end),
-                sortDirection,
-            ),
+        getData: (workflow) => Date.parse(workflow.end),
+        display: (data) => (data ? new Date(data).toLocaleString() : null),
+        comparator: numberComparator,
     },
     elapse: {
         label: 'Elapse',
-        display: (workflow) =>
-            workflow.end && workflow.start
-                ? getTimeString(
-                    Date.parse(workflow.end) - Date.parse(workflow.start),
-                )
-                : null,
-        comparator: (a, b, sortDirection = SortDirection.DESC) =>
-            numberComparator(
-                Date.parse(a.end) - Date.parse(a.start),
-                Date.parse(b.end) - Date.parse(b.start),
-                sortDirection,
-            ),
+        getData: (workflow) =>
+            Date.parse(workflow.end) - Date.parse(workflow.start),
+        display: (data) => getTimeString(data),
+        comparator: numberComparator,
+        width: 100,
     },
     status: {
         label: 'Status',
-    },
-    metadataArchiveStatus: {
-        label: 'Metadata Archive',
     },
 };
 
@@ -154,7 +145,9 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const [loadingWorkflows, setLoadingWorkflows] = useState(true);
     const [workflows, setWorkflows] = useState([]);
     useEffect(() => {
-        authorizedFetch(`/api/workflows/${apiVersion}/query`)
+        authorizedFetch(
+            `/api/workflows/${apiVersion}/query?additionalQueryResultFields=labels`,
+        )
             .then((res) => res.json())
             .then((res) => {
                 setAppBarTitle(`${res.results.length} workflows`);
@@ -205,7 +198,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         rowData: PropTypes.object.isRequired,
     };
 
-    const cellRenderer = ({ dataKey, rowData, cellData }) => {
+    const cellRenderer = ({ dataKey, cellData }) => {
         return (
             <TableCell
                 component="div"
@@ -215,7 +208,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
                 align="left"
             >
                 {workflowColumns[dataKey].display
-                    ? workflowColumns[dataKey].display(rowData)
+                    ? workflowColumns[dataKey].display(cellData)
                     : cellData}
             </TableCell>
         );
@@ -233,10 +226,14 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         setSortDirection(sortDirection);
         const stabilizedWorkflows = workflows.map((el, index) => [el, index]);
         const comparator =
-            workflowColumns[sortBy].comparator ||
-            createDefaultComparator(sortBy);
+            workflowColumns[sortBy].comparator || defaultComparator;
         stabilizedWorkflows.sort(
-            (a, b) => comparator(a[0], b[0], sortDirection) || a[1] - b[1],
+            (a, b) =>
+                comparator(
+                    cellDataGetter({ dataKey: sortBy, rowData: a[0] }),
+                    cellDataGetter({ dataKey: sortBy, rowData: b[0] }),
+                    sortDirection,
+                ) || a[1] - b[1],
         );
         setWorkflows(stabilizedWorkflows.map((el) => el[0]));
     };
