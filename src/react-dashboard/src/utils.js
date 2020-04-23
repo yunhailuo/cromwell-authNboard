@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, useRef, useState } from 'react';
 import Button from '@material-ui/core/Button';
 import PropTypes from 'prop-types';
+import { SortDirection } from 'react-virtualized';
 import { makeStyles } from '@material-ui/core/styles';
 import { refType } from '@material-ui/utils';
 
@@ -64,4 +65,14 @@ export const getTimeString = (milliseconds) => {
     const hours = minutes / 60;
     if (hours < 1) return minutes.toFixed(1) + ' min';
     return hours.toFixed(1) + ' hr';
+};
+
+export { SortDirection };
+
+export const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
+    if (isNaN(a) && !isNaN(b)) return 1;
+    if (!isNaN(a) && isNaN(b)) return -1;
+    if (isNaN(a) && isNaN(b)) return 0;
+    const descOrder = Math.sign(b - a);
+    return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };

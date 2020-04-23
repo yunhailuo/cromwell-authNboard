@@ -1,11 +1,6 @@
-import {
-    AutoSizer,
-    Column,
-    SortDirection,
-    Table,
-    WindowScroller,
-} from 'react-virtualized';
+import { AutoSizer, Column, Table, WindowScroller } from 'react-virtualized';
 import React, { useEffect, useState } from 'react';
+import { SortDirection, getTimeString, numberComparator } from '../utils';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import { Link } from 'react-router-dom';
 import LinkStyle from '@material-ui/core/Link';
@@ -14,7 +9,6 @@ import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tooltip from '@material-ui/core/Tooltip';
 import clsx from 'clsx';
-import { getTimeString } from '../utils';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from '../App';
 import { useAuth0 } from '../auth';
@@ -48,14 +42,6 @@ const defaultComparator = (a, b, sortDirection = SortDirection.DESC) => {
     if (!a && b) return 1;
     if (!a && !b) return 0;
     const descOrder = a > b ? -1 : a === b ? 0 : 1;
-    return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
-};
-
-const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
-    if (isNaN(a) && !isNaN(b)) return 1;
-    if (!isNaN(a) && isNaN(b)) return -1;
-    if (isNaN(a) && isNaN(b)) return 0;
-    const descOrder = Math.sign(b - a);
     return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
 
