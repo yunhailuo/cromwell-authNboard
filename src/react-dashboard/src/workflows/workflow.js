@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SortDirection, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Divider from '@material-ui/core/Divider';
@@ -24,6 +25,11 @@ const useStyles = makeStyles((theme) => ({
         position: 'relative',
         top: 5,
     },
+    chartContainer: {
+        borderColor: theme.palette.divider,
+        borderStyle: 'solid',
+        borderWidth: 1,
+    },
 }));
 
 const distillMetadata = (metadata) => {
@@ -35,15 +41,72 @@ const distillMetadata = (metadata) => {
         isNaN(start) || isNaN(end) ? '' : ` (${getTimeString(end - start)})`;
     const duration = `${startString} - ${endString}${durationPostfix}`;
 
+    const callStarts = [];
+    const callEnds = [];
+    const backends = new Set();
+    const zones = new Set();
+    const machineTypes = new Set();
     let totalCpuHours = 0;
     let cpuError = '';
     let totalMemoryHours = 0;
     let memoryError = '';
-    const machineTypes = new Set();
-    const zones = new Set();
-    const backends = new Set();
+    const endSortedCalls = [];
     Object.keys(metadata.calls).forEach((callName) => {
-        metadata.calls[callName].forEach((callShard) => {
+        const shardStarts = [];
+        const shardEnds = [];
+        const shardArray = Array.isArray(metadata.calls[callName])
+            ? metadata.calls[callName]
+            : [metadata.calls[callName]];
+        const callShards = shardArray.map((callShard) => {
+            const eventStarts = [];
+            const eventEnds = [];
+            const callShardEvents =
+                callShard.executionEvents &&
+                callShard.executionEvents.length > 0
+                    ? callShard.executionEvents
+                        .map((event) => {
+                            const eventStart = Date.parse(event.startTime);
+                            const eventEnd = Date.parse(event.endTime);
+                            eventStarts.push(eventStart);
+                            eventEnds.push(eventEnd);
+                            return {
+                                start: eventStart,
+                                end: eventEnd,
+                                label: event.description,
+                            };
+                        })
+                        .sort((a, b) =>
+                            numberComparator(a.end, b.end, SortDirection.ASC),
+                        )
+                    : [];
+            const shardStart = Math.min.apply(null, eventStarts);
+            const shardEnd = Math.max.apply(null, eventEnds);
+            shardStarts.push(shardStart);
+            shardEnds.push(shardEnd);
+            const distilledShard =
+                callShardEvents.length > 0
+                    ? {
+                        start: shardStart,
+                        end: shardEnd,
+                        shardIndex: callShard.shardIndex,
+                        events: callShardEvents,
+                    }
+                    : null;
+
+            backends.add(callShard.backend || 'unknown');
+            if (callShard.jes) {
+                zones.add(callShard.jes.zone || 'unknown');
+                machineTypes.add(callShard.jes.machineType || 'unknown');
+            } else {
+                zones.add('N/A');
+                machineTypes.add('N/A');
+            }
+
+            // Calculation can't be right once there is an error.
+            if (cpuError && memoryError) {
+                return distilledShard;
+            }
+
             const start = new Date(callShard.start);
             const end = new Date(callShard.end);
             if (isNaN(start) || isNaN(end)) {
@@ -75,30 +138,53 @@ const distillMetadata = (metadata) => {
                         (memorySize * (end - start)) / 1000 / 60 / 60;
                 }
             }
-            if (callShard.jes) {
-                machineTypes.add(callShard.jes.machineType || 'unknown');
-                zones.add(callShard.jes.zone || 'unknown');
-            } else {
-                machineTypes.add('N/A');
-                zones.add('N/A');
-            }
-            backends.add(callShard.backend || 'unknown');
+            return distilledShard;
+        });
+        // callShards = [{ start, end, shardIndex, events }, ..., null, ...]
+        const filteredCallShards = callShards.filter((shard) => Boolean(shard));
+        filteredCallShards.sort((a, b) =>
+            numberComparator(a.end, b.end, SortDirection.ASC),
+        );
+        const callStart = Math.min.apply(null, shardStarts);
+        const callEnd = Math.max.apply(null, shardEnds);
+        callStarts.push(callStart);
+        callEnds.push(callEnd);
+        endSortedCalls.push({
+            start: callStart,
+            end: callEnd,
+            callName: callName,
+            shards: filteredCallShards.map((shard) => [
+                shard.shardIndex,
+                shard.events,
+            ]),
         });
     });
+    // endSortedCalls = [{ start, end, callName, shards: [[shardIndex, events], ...] }, ...]
+    endSortedCalls.sort((a, b) =>
+        numberComparator(a.end, b.end, SortDirection.ASC),
+    );
     return {
-        'Workflow Language': `${metadata.actualWorkflowLanguage}${
-            metadata.actualWorkflowLanguageVersion
-                ? ` (${metadata.actualWorkflowLanguageVersion})`
-                : ''
-        }`,
-        Submission: new Date(metadata.submission).toLocaleString(),
-        Duration: duration,
-        'Workflow Root': metadata.workflowRoot,
-        Backends: Array.from(backends).join(', '),
-        'Machine zones': Array.from(zones).join(', '),
-        'Machine types used': Array.from(machineTypes).join(', '),
-        'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
-        'Total memory GB * hours': memoryError || totalMemoryHours.toFixed(2),
+        basicMetadata: {
+            'Workflow Language': `${metadata.actualWorkflowLanguage}${
+                metadata.actualWorkflowLanguageVersion
+                    ? ` (${metadata.actualWorkflowLanguageVersion})`
+                    : ''
+            }`,
+            Submission: new Date(metadata.submission).toLocaleString(),
+            Duration: duration,
+            'Workflow Root': metadata.workflowRoot,
+            Backends: Array.from(backends).join(', '),
+            'Machine zones': Array.from(zones).join(', '),
+            'Machine types used': Array.from(machineTypes).join(', '),
+            'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
+            'Total memory GB * hours':
+                memoryError || totalMemoryHours.toFixed(2),
+        },
+        workflowCalls: {
+            start: Math.min.apply(null, callStarts),
+            end: Math.max.apply(null, callEnds),
+            calls: endSortedCalls,
+        },
     };
 };
 
@@ -154,6 +240,7 @@ const Workflow = ({
     const [metadata, setMetadata] = useState();
     const [metadataDownloadUrl, setMetadataDownloadUrl] = useState();
     const [basicMetadata, setBasicMetadata] = useState();
+    const [workflowCalls, setWorkflowCalls] = useState();
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then((res) => res.json())
@@ -165,7 +252,9 @@ const Workflow = ({
                     }),
                 );
                 setMetadataDownloadUrl(downloadUrl);
-                setBasicMetadata(distillMetadata(res));
+                const { basicMetadata, workflowCalls } = distillMetadata(res);
+                setBasicMetadata(basicMetadata);
+                setWorkflowCalls(workflowCalls);
                 setMetadata(res);
             })
             .catch((err) => console.error(err))
@@ -198,9 +287,11 @@ const Workflow = ({
                 color="secondary"
                 className={classes.subtitle}
             >
-                <Box textAlign="left">Execution time</Box>
+                <Box textAlign="left">Execution chart</Box>
             </Typography>
-            <ExecutionChart metadata={metadata} />
+            <Box className={classes.chartContainer}>
+                <ExecutionChart workflowCalls={workflowCalls} />
+            </Box>
             <Divider />
             {/* Labels */}
             <Typography
