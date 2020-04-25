@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import React, { useState } from 'react';
+import { SortDirection, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
@@ -22,6 +23,81 @@ const useStyles = makeStyles((theme) => ({
         top: 0,
     },
 }));
+
+const extractCallsShardsEvents = (metadata) => {
+    const callStarts = [];
+    const callEnds = [];
+    const endSortedCalls = [];
+    Object.keys(metadata.calls).forEach((callName) => {
+        const shardStarts = [];
+        const shardEnds = [];
+        const shardArray = Array.isArray(metadata.calls[callName])
+            ? metadata.calls[callName]
+            : [metadata.calls[callName]];
+        const callShards = shardArray.map((callShard) => {
+            const eventStarts = [];
+            const eventEnds = [];
+            const callShardEvents =
+                callShard.executionEvents &&
+                callShard.executionEvents.length > 0
+                    ? callShard.executionEvents
+                        .map((event) => {
+                            const eventStart = Date.parse(event.startTime);
+                            const eventEnd = Date.parse(event.endTime);
+                            eventStarts.push(eventStart);
+                            eventEnds.push(eventEnd);
+                            return {
+                                start: eventStart,
+                                end: eventEnd,
+                                label: event.description,
+                            };
+                        })
+                        .sort((a, b) =>
+                            numberComparator(a.end, b.end, SortDirection.ASC),
+                        )
+                    : [];
+            const shardStart = Math.min.apply(null, eventStarts);
+            const shardEnd = Math.max.apply(null, eventEnds);
+            shardStarts.push(shardStart);
+            shardEnds.push(shardEnd);
+            return callShardEvents.length > 0
+                ? {
+                    start: shardStart,
+                    end: shardEnd,
+                    shardIndex: callShard.shardIndex,
+                    events: callShardEvents,
+                }
+                : null;
+        });
+        // callShards = [{ start, end, shardIndex, events }, ..., null, ...]
+        const filteredCallShards = callShards.filter((shard) => Boolean(shard));
+        filteredCallShards.sort((a, b) =>
+            numberComparator(a.end, b.end, SortDirection.ASC),
+        );
+        const callStart = Math.min.apply(null, shardStarts);
+        const callEnd = Math.max.apply(null, shardEnds);
+        callStarts.push(callStart);
+        callEnds.push(callEnd);
+        endSortedCalls.push({
+            start: callStart,
+            end: callEnd,
+            callName: callName,
+            shards: filteredCallShards.map((shard) => [
+                shard.shardIndex,
+                shard.events,
+            ]),
+        });
+    });
+    // endSortedCalls = [{ start, end, callName, shards: [[shardIndex, events], ...] }, ...]
+    endSortedCalls.sort((a, b) =>
+        numberComparator(a.end, b.end, SortDirection.ASC),
+    );
+    return {
+        start: Math.min.apply(null, callStarts),
+        end: Math.max.apply(null, callEnds),
+        calls: endSortedCalls,
+    };
+};
 
 // Adapted from d3-axis
 const Axis = ({ scale, orient = 'top' }) => {
@@ -106,9 +182,10 @@ HighlightableStrip.propTypes = {
     isFilled: PropTypes.bool.isRequired,
 };
 
-export const ExecutionChart = ({ workflowCalls, width = 1200 }) => {
+export const ExecutionChart = ({ workflowMetadata, width = 1200 }) => {
     const classes = useStyles();
 
+    const workflowCalls = extractCallsShardsEvents(workflowMetadata);
     // workflowCalls = [
     //     {
     //         start,
@@ -240,16 +317,6 @@ export const ExecutionChart = ({ workflowCalls, width = 1200 }) => {
     );
 };
 ExecutionChart.propTypes = {
-    workflowCalls: PropTypes.shape({
-        start: PropTypes.number.isRequired,
-        end: PropTypes.number.isRequired,
-        calls: PropTypes.arrayOf(
-            PropTypes.shape({
-                start: PropTypes.number.isRequired,
-                end: PropTypes.number.isRequired,
-                shards: PropTypes.arrayOf(PropTypes.array).isRequired,
-            }),
-        ).isRequired,
-    }).isRequired,
+    workflowMetadata: PropTypes.object,
     width: PropTypes.number,
 };

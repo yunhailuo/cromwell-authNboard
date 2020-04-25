@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { SortDirection, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Divider from '@material-ui/core/Divider';
@@ -27,7 +26,56 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const distillMetadata = (metadata) => {
+const SimpleObjectTable = ({ obj = {} }) =>
+    obj && Object.keys(obj).length > 0 ? (
+        <Table size="small">
+            <TableBody>
+                {Object.keys(obj)
+                    .filter((k) => obj[k] && obj[k].length > 0)
+                    .sort()
+                    .map((k) =>
+                        Array.isArray(obj[k]) ? (
+                            obj[k].map((element, index) => (
+                                <TableRow key={index}>
+                                    {index === 0 ? (
+                                        <TableCell
+                                            component="th"
+                                            scope="row"
+                                            rowSpan={obj[k].length}
+                                        >
+                                            <strong>{k}:</strong>
+                                        </TableCell>
+                                    ) : null}
+                                    <TableCell>{element}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow key={k}>
+                                <TableCell component="th" scope="row">
+                                    <strong>{k}:</strong>
+                                </TableCell>
+                                <TableCell>{obj[k]}</TableCell>
+                            </TableRow>
+                        ),
+                    )}
+            </TableBody>
+        </Table>
+    ) : (
+        <Table size="small">
+            <TableBody>
+                <TableRow>
+                    <TableCell component="th" scope="row" colSpan={2}>
+                        N/A
+                    </TableCell>
+                </TableRow>
+            </TableBody>
+        </Table>
+    );
+SimpleObjectTable.propTypes = {
+    obj: PropTypes.object,
+};
+
+const BasicMetadataTable = (metadata) => {
     const start = new Date(metadata.start);
     const end = new Date(metadata.end);
     const startString = isNaN(start) ? '?' : start.toLocaleString();
@@ -36,58 +84,18 @@ const distillMetadata = (metadata) => {
         isNaN(start) || isNaN(end) ? '' : ` (${getTimeString(end - start)})`;
     const duration = `${startString} - ${endString}${durationPostfix}`;
 
-    const callStarts = [];
-    const callEnds = [];
     const backends = new Set();
     const zones = new Set();
     const machineTypes = new Set();
     let totalCpuHours = 0;
-    let cpuError = '';
+    let cpuError = [];
     let totalMemoryHours = 0;
-    let memoryError = '';
-    const endSortedCalls = [];
+    let memoryError = [];
     Object.keys(metadata.calls).forEach((callName) => {
-        const shardStarts = [];
-        const shardEnds = [];
         const shardArray = Array.isArray(metadata.calls[callName])
             ? metadata.calls[callName]
             : [metadata.calls[callName]];
-        const callShards = shardArray.map((callShard) => {
-            const eventStarts = [];
-            const eventEnds = [];
-            const callShardEvents =
-                callShard.executionEvents &&
-                callShard.executionEvents.length > 0
-                    ? callShard.executionEvents
-                        .map((event) => {
-                            const eventStart = Date.parse(event.startTime);
-                            const eventEnd = Date.parse(event.endTime);
-                            eventStarts.push(eventStart);
-                            eventEnds.push(eventEnd);
-                            return {
-                                start: eventStart,
-                                end: eventEnd,
-                                label: event.description,
-                            };
-                        })
-                        .sort((a, b) =>
-                            numberComparator(a.end, b.end, SortDirection.ASC),
-                        )
-                    : [];
-            const shardStart = Math.min.apply(null, eventStarts);
-            const shardEnd = Math.max.apply(null, eventEnds);
-            shardStarts.push(shardStart);
-            shardEnds.push(shardEnd);
-            const distilledShard =
-                callShardEvents.length > 0
-                    ? {
-                        start: shardStart,
-                        end: shardEnd,
-                        shardIndex: callShard.shardIndex,
-                        events: callShardEvents,
-                    }
-                    : null;
-
+        shardArray.forEach((callShard) => {
             backends.add(callShard.backend || 'unknown');
             if (callShard.jes) {
                 zones.add(callShard.jes.zone || 'unknown');
@@ -98,26 +106,26 @@ const distillMetadata = (metadata) => {
             }
 
             // Calculation can't be right once there is an error.
-            if (cpuError && memoryError) {
-                return distilledShard;
-            }
+            if (cpuError.length > 0 && memoryError.length > 0) return null;
 
             const start = new Date(callShard.start);
             const end = new Date(callShard.end);
             if (isNaN(start) || isNaN(end)) {
                 const error = `Missing start/end time for ${callName}`;
-                cpuError = error;
-                memoryError = error;
+                cpuError.push(error);
+                memoryError.push(error);
             } else if (!callShard.runtimeAttributes) {
                 const error = `Missing runtime attributes for ${callName}`;
-                cpuError = error;
-                memoryError = error;
+                cpuError.push(error);
+                memoryError.push(error);
             } else {
                 const cpuCount =
                     callShard.runtimeAttributes.cpu ||
                     callShard.runtimeAttributes.cpuMin;
                 if (isNaN(cpuCount)) {
-                    cpuError = `Failed to get number of CPU for ${callName}`;
+                    cpuError.push(
+                        `Failed to get number of CPU for ${callName}`,
+                    );
                 } else {
                     totalCpuHours +=
                         (cpuCount * (end - start)) / 1000 / 60 / 60;
@@ -127,98 +135,37 @@ const distillMetadata = (metadata) => {
                     callShard.runtimeAttributes.memoryMin
                 ).replace(' GB', '');
                 if (isNaN(memorySize)) {
-                    memoryError = `Failed to get memory in GB for ${callName}`;
+                    memoryError.push(
+                        `Failed to get memory in GB for ${callName}`,
+                    );
                 } else {
                     totalMemoryHours +=
                         (memorySize * (end - start)) / 1000 / 60 / 60;
                 }
             }
-            return distilledShard;
-        });
-        // callShards = [{ start, end, shardIndex, events }, ..., null, ...]
-        const filteredCallShards = callShards.filter((shard) => Boolean(shard));
-        filteredCallShards.sort((a, b) =>
-            numberComparator(a.end, b.end, SortDirection.ASC),
-        );
-        const callStart = Math.min.apply(null, shardStarts);
-        const callEnd = Math.max.apply(null, shardEnds);
-        callStarts.push(callStart);
-        callEnds.push(callEnd);
-        endSortedCalls.push({
-            start: callStart,
-            end: callEnd,
-            callName: callName,
-            shards: filteredCallShards.map((shard) => [
-                shard.shardIndex,
-                shard.events,
-            ]),
         });
     });
-    // endSortedCalls = [{ start, end, callName, shards: [[shardIndex, events], ...] }, ...]
-    endSortedCalls.sort((a, b) =>
-        numberComparator(a.end, b.end, SortDirection.ASC),
-    );
-    return {
-        basicMetadata: {
-            'Workflow Language': `${metadata.actualWorkflowLanguage}${
-                metadata.actualWorkflowLanguageVersion
-                    ? ` (${metadata.actualWorkflowLanguageVersion})`
-                    : ''
-            }`,
-            Submission: new Date(metadata.submission).toLocaleString(),
-            Duration: duration,
-            'Workflow Root': metadata.workflowRoot,
-            Backends: Array.from(backends).join(', '),
-            'Machine zones': Array.from(zones).join(', '),
-            'Machine types used': Array.from(machineTypes).join(', '),
-            'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
-            'Total memory GB * hours':
-                memoryError || totalMemoryHours.toFixed(2),
-        },
-        workflowCalls: {
-            start: Math.min.apply(null, callStarts),
-            end: Math.max.apply(null, callEnds),
-            calls: endSortedCalls,
-        },
-    };
-};
 
-const SimpleObjectTable = ({ obj }) => (
-    <Table size="small">
-        <TableBody>
-            {Object.keys(obj)
-                .filter((k) => obj[k] && obj[k].length > 0)
-                .sort()
-                .map((k) =>
-                    Array.isArray(obj[k]) ? (
-                        obj[k].map((element, index) => (
-                            <TableRow key={index}>
-                                {index === 0 ? (
-                                    <TableCell
-                                        component="th"
-                                        scope="row"
-                                        rowSpan={obj[k].length}
-                                    >
-                                        <strong>{k}:</strong>
-                                    </TableCell>
-                                ) : null}
-                                <TableCell>{element}</TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow key={k}>
-                            <TableCell component="th" scope="row">
-                                <strong>{k}:</strong>
-                            </TableCell>
-                            <TableCell>{obj[k]}</TableCell>
-                        </TableRow>
-                    ),
-                )}
-        </TableBody>
-    </Table>
-);
-SimpleObjectTable.propTypes = {
-    obj: PropTypes.object.isRequired,
+    return (
+        <SimpleObjectTable
+            obj={{
+                'Workflow Language': `${metadata.actualWorkflowLanguage}${
+                    metadata.actualWorkflowLanguageVersion
+                        ? ` (${metadata.actualWorkflowLanguageVersion})`
+                        : ''
+                }`,
+                Submission: new Date(metadata.submission).toLocaleString(),
+                Duration: duration,
+                'Workflow Root': metadata.workflowRoot,
+                Backends: Array.from(backends).join(', '),
+                'Machine zones': Array.from(zones).join(', '),
+                'Machine types used': Array.from(machineTypes).join(', '),
+                'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
+                'Total memory GB * hours':
+                    memoryError || totalMemoryHours.toFixed(2),
+            }}
+        />
+    );
 };
 
 const Workflow = ({
@@ -234,8 +181,6 @@ const Workflow = ({
     const [loadingMetadata, setLoadingMetadata] = useState(true);
     const [metadata, setMetadata] = useState();
     const [metadataDownloadUrl, setMetadataDownloadUrl] = useState();
-    const [basicMetadata, setBasicMetadata] = useState();
-    const [workflowCalls, setWorkflowCalls] = useState();
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then((res) => res.json())
@@ -247,9 +192,6 @@ const Workflow = ({
                     }),
                 );
                 setMetadataDownloadUrl(downloadUrl);
-                const { basicMetadata, workflowCalls } = distillMetadata(res);
-                setBasicMetadata(basicMetadata);
-                setWorkflowCalls(workflowCalls);
                 setMetadata(res);
             })
             .catch((err) => console.error(err))
@@ -274,7 +216,7 @@ const Workflow = ({
                     ) : null}
                 </Box>
             </Typography>
-            <SimpleObjectTable obj={basicMetadata} />
+            <BasicMetadataTable {...metadata} />
             {/* Execution time */}
             <Typography
                 component="h4"
@@ -284,7 +226,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Execution chart</Box>
             </Typography>
-            <ExecutionChart workflowCalls={workflowCalls} />
+            <ExecutionChart workflowMetadata={metadata} />
             <Divider />
             {/* Labels */}
             <Typography
@@ -295,19 +237,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Labels</Box>
             </Typography>
-            {metadata.labels && Object.keys(metadata.labels).length > 0 ? (
-                <SimpleObjectTable obj={metadata.labels} />
-            ) : (
-                <Table size="small">
-                    <TableBody>
-                        <TableRow>
-                            <TableCell component="th" scope="row" colSpan={2}>
-                                No labels
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            )}
+            <SimpleObjectTable obj={metadata.labels} />
             {/* Inputs */}
             <Typography
                 component="h4"
@@ -317,19 +247,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Inputs</Box>
             </Typography>
-            {metadata.inputs && Object.keys(metadata.inputs).length > 0 ? (
-                <SimpleObjectTable obj={metadata.inputs} />
-            ) : (
-                <Table size="small">
-                    <TableBody>
-                        <TableRow>
-                            <TableCell component="th" scope="row" colSpan={2}>
-                                No inputs
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            )}
+            <SimpleObjectTable obj={metadata.inputs} />
             {/* Outputs */}
             <Typography
                 component="h4"
@@ -339,19 +257,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Outputs</Box>
             </Typography>
-            {metadata.outputs && Object.keys(metadata.outputs).length > 0 ? (
-                <SimpleObjectTable obj={metadata.outputs} />
-            ) : (
-                <Table size="small">
-                    <TableBody>
-                        <TableRow>
-                            <TableCell component="th" scope="row" colSpan={2}>
-                                No outputs
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            )}
+            <SimpleObjectTable obj={metadata.outputs} />
         </React.Fragment>
     );
 };
