@@ -7,7 +7,6 @@ import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
-import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from './App';
 
@@ -20,13 +19,11 @@ const useStyles = makeStyles((theme) => ({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    paper: {
+    fixedHeightPaper: {
         padding: theme.spacing(2),
         display: 'flex',
         overflow: 'auto',
         flexDirection: 'column',
-    },
-    fixedHeight: {
         height: 240,
     },
     superDense: {
@@ -35,27 +32,46 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const Home = () => {
+const ServerTile = () => {
     const { authorizedFetch } = useAuth0();
-    const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Cromwell Dashboard'), [setAppBarTitle]);
+    const { apiVersion } = useApp();
 
-    const classes = useStyles();
-    const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
-
-    const [engineStatus, setEngineStatus] = useState([]);
-    const enginUrl = `/engine/${apiVersion}`;
+    const [engineStatus, setEngineStatus] = useState('');
     useEffect(() => {
-        authorizedFetch(enginUrl + '/status', {})
+        authorizedFetch(`/engine/${apiVersion}/status`)
             .then((res) => res.statusText)
             .then((res) => setEngineStatus(res))
             .catch((err) => console.error(err));
-    }, [authorizedFetch, enginUrl]);
+    }, [authorizedFetch, apiVersion]);
+
+    const classes = useStyles();
+
+    return (
+        <Grid item xs={12} md={4} lg={3}>
+            <Paper className={classes.fixedHeightPaper}>
+                <Typography
+                    component="h2"
+                    variant="h6"
+                    color="primary"
+                    gutterBottom
+                >
+                    Cromwell server {apiVersion}
+                </Typography>
+                <Typography component="p" variant="button">
+                    Status: {engineStatus}
+                </Typography>
+            </Paper>
+        </Grid>
+    );
+};
+
+const WorkflowSummaryTile = () => {
+    const { authorizedFetch } = useAuth0();
+    const { apiVersion } = useApp();
 
     const [workflowSummary, setWorkflowSummary] = useState({});
-    const queryUrl = `/api/workflows/${apiVersion}/query`;
     useEffect(() => {
-        authorizedFetch(queryUrl)
+        authorizedFetch(`/api/workflows/${apiVersion}/query`)
             .then((res) => res.json())
             .then((res) => {
                 const summary = res.results.reduce((acc, res) => {
@@ -69,55 +85,51 @@ const Home = () => {
                 setWorkflowSummary(summary);
             })
             .catch((err) => console.error(err));
-    }, [authorizedFetch, queryUrl]);
+    }, [authorizedFetch, apiVersion]);
+
+    const classes = useStyles();
+
+    return (
+        <Grid item xs={12} md={4} lg={3}>
+            <Paper className={classes.fixedHeightPaper}>
+                <Typography
+                    component="h2"
+                    variant="h6"
+                    color="primary"
+                    gutterBottom
+                >
+                    Workflows
+                </Typography>
+                <List dense>
+                    {Object.keys(workflowSummary)
+                        .sort()
+                        .reverse()
+                        .map((k) => (
+                            <ListItem key={k} className={classes.superDense}>
+                                <ListItemText>
+                                    <strong>{k}</strong>
+                                    {`: ${workflowSummary[k]}`}
+                                </ListItemText>
+                            </ListItem>
+                        ))}
+                </List>
+            </Paper>
+        </Grid>
+    );
+};
+
+const Home = () => {
+    const { setAppBarTitle } = useApp();
+    useEffect(() => setAppBarTitle('Cromwell Dashboard'), [setAppBarTitle]);
+
+    const classes = useStyles();
 
     return (
         <React.Fragment>
             <Container maxWidth="lg" className={classes.container}>
                 <Grid container spacing={3} className={classes.gridContainer}>
-                    <Grid item xs={12} md={4} lg={3}>
-                        <Paper className={fixedHeightPaper}>
-                            <Typography
-                                component="h2"
-                                variant="h6"
-                                color="primary"
-                                gutterBottom
-                            >
-                                Cromwell server {apiVersion}
-                            </Typography>
-                            <Typography component="p" variant="button">
-                                Status: {engineStatus}
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} md={4} lg={3}>
-                        <Paper className={fixedHeightPaper}>
-                            <Typography
-                                component="h2"
-                                variant="h6"
-                                color="primary"
-                                gutterBottom
-                            >
-                                Workflows
-                            </Typography>
-                            <List dense>
-                                {Object.keys(workflowSummary)
-                                    .sort()
-                                    .reverse()
-                                    .map((k) => (
-                                        <ListItem
-                                            key={k}
-                                            className={classes.superDense}
-                                        >
-                                            <ListItemText>
-                                                <strong>{k}</strong>
-                                                {`: ${workflowSummary[k]}`}
-                                            </ListItemText>
-                                        </ListItem>
-                                    ))}
-                            </List>
-                        </Paper>
-                    </Grid>
+                    <ServerTile />
+                    <WorkflowSummaryTile />
                     <UserTile />
                 </Grid>
             </Container>
