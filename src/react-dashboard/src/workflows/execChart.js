@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 
 const AxisTop = ({ domain = [0, 100], range = [10, 290], ...otherAttrs }) => {
@@ -55,6 +55,35 @@ const AxisTop = ({ domain = [0, 100], range = [10, 290], ...otherAttrs }) => {
 AxisTop.propTypes = {
     domain: PropTypes.arrayOf(PropTypes.number),
     range: PropTypes.arrayOf(PropTypes.number),
+};
+
+const HighlightableStrip = ({ isFilled, ...otherAttrs }) => {
+    const [highlight, setHighlight] = useState(false);
+    const handleMouseOver = () => {
+        setHighlight(true);
+    };
+    const handleMouseLeave = () => {
+        setHighlight(false);
+    };
+    return (
+        <rect
+            fill={
+                highlight
+                    ? '#7986cb'
+                    : isFilled
+                        ? '#e2e2e2'
+                        : 'rgba(0, 0, 0, 0)'
+            }
+            {...otherAttrs}
+            onMouseOver={handleMouseOver}
+            onMouseLeave={handleMouseLeave}
+        />
+    );
+};
+HighlightableStrip.propTypes = {
+    width: PropTypes.number.isRequired,
+    height: PropTypes.number.isRequired,
+    isFilled: PropTypes.bool.isRequired,
 };
 
 export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
@@ -114,21 +143,6 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
             >
                 {workflowCalls.calls.map((call, i) => (
                     <g key={call.callName}>
-                        {i % 2 === 1 ? (
-                            <g
-                                transform={`translate(0, ${y(
-                                    cumShardCount[i - 1] || 0,
-                                ) -
-                                    (y.step() * y.padding()) / 2})`}
-                            >
-                                <rect
-                                    x={0}
-                                    height={y.step() * call.shards.length}
-                                    width={plotSize.width}
-                                    fill="#e2e2e2"
-                                />
-                            </g>
-                        ) : null}
                         {call.shards.map(([shardIndex, events], j) => (
                             <g
                                 key={j}
@@ -136,6 +150,18 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
                                     (cumShardCount[i - 1] || 0) + j,
                                 )})`}
                             >
+                                <g
+                                    transform={`translate(0, ${-(
+                                        y.step() * y.padding()
+                                    ) / 2})`}
+                                >
+                                    <HighlightableStrip
+                                        x={0}
+                                        height={y.step()}
+                                        width={plotSize.width}
+                                        isFilled={i % 2 === 0}
+                                    />
+                                </g>
                                 {events.map((event, k) => (
                                     <rect
                                         key={k}
