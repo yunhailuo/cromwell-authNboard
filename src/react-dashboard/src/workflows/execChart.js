@@ -1,6 +1,27 @@
 import * as d3 from 'd3';
 import React, { useMemo, useState } from 'react';
+import Box from '@material-ui/core/Box';
 import PropTypes from 'prop-types';
+import { makeStyles } from '@material-ui/core/styles';
+
+// https://css-tricks.com/scale-svg/
+const useStyles = makeStyles((theme) => ({
+    chartContainer: {
+        borderColor: theme.palette.divider,
+        borderStyle: 'solid',
+        borderWidth: 1,
+        position: 'relative',
+        height: 0,
+        width: '100%',
+    },
+    chart: {
+        position: 'absolute',
+        height: '100%',
+        width: '100%',
+        left: 0,
+        top: 0,
+    },
+}));
 
 const AxisTop = ({ domain = [0, 100], range = [10, 290], ...otherAttrs }) => {
     const ticks = useMemo(() => {
@@ -87,6 +108,8 @@ HighlightableStrip.propTypes = {
 };
 
 export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
+    const classes = useStyles();
+
     // workflowCalls = [
     //     {
     //         start,
@@ -111,7 +134,7 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
         workflowCalls.calls.map((call) => call.callName.length),
     );
     // add 2 characters for shard index
-    const labelWidth = (maxCallNameLength + 2) * 9;
+    const labelWidth = (maxCallNameLength + 2) * 7.5;
     // Leave 30px space for top and bottom axes
     const height = cumShardCount[cumShardCount.length - 1] * 25 + 30 + 30;
     const plotSize = {
@@ -128,69 +151,82 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
         .scaleBand()
         .domain(d3.range(cumShardCount[cumShardCount.length - 1]))
         .range([0, plotSize.height])
-        .padding(0.5);
+        .padding(0.4);
 
     return (
-        <svg width={width} height={height}>
-            <AxisTop
-                domain={[workflowCalls.start, workflowCalls.end]}
-                range={[0, plotSize.width]}
-                transform={`translate(${plotSize.marginLeft} 0)`}
-            />
-
-            <g
-                transform={`translate(${plotSize.marginLeft} ${plotSize.marginTop})`}
+        <Box
+            padding={0}
+            paddingBottom={`${(height / width) * 100}%`}
+            className={classes.chartContainer}
+        >
+            <svg
+                width={width}
+                height={height}
+                viewBox={`0 0 ${width} ${height}`}
+                className={classes.chart}
             >
-                {workflowCalls.calls.map((call, i) => (
-                    <g key={call.callName}>
-                        {call.shards.map(([shardIndex, events], j) => (
-                            <g
-                                key={j}
-                                transform={`translate(0 ${y(
-                                    (cumShardCount[i - 1] || 0) + j,
-                                )})`}
-                            >
+                <AxisTop
+                    domain={[workflowCalls.start, workflowCalls.end]}
+                    range={[0, plotSize.width]}
+                    transform={`translate(${plotSize.marginLeft} 0)`}
+                />
+
+                <g
+                    transform={`translate(${plotSize.marginLeft} ${plotSize.marginTop})`}
+                >
+                    {workflowCalls.calls.map((call, i) => (
+                        <g key={call.callName}>
+                            {call.shards.map(([shardIndex, events], j) => (
                                 <g
-                                    transform={`translate(0, ${-(
-                                        y.step() * y.padding()
-                                    ) / 2})`}
+                                    key={j}
+                                    transform={`translate(0 ${y(
+                                        (cumShardCount[i - 1] || 0) + j,
+                                    )})`}
                                 >
-                                    <HighlightableStrip
-                                        x={0}
-                                        height={y.step()}
-                                        width={plotSize.width}
-                                        isFilled={i % 2 === 0}
-                                    />
+                                    <text
+                                        x={-10}
+                                        y={0}
+                                        fill="black"
+                                        dominantBaseline="hanging"
+                                        textAnchor="end"
+                                    >
+                                        {call.callName}
+                                        {call.shards.length > 1
+                                            ? `.${shardIndex}`
+                                            : null}
+                                    </text>
+                                    <g
+                                        transform={`translate(0, ${-(
+                                            y.step() * y.padding()
+                                        ) / 2})`}
+                                    >
+                                        <HighlightableStrip
+                                            x={0}
+                                            height={y.step()}
+                                            width={plotSize.width}
+                                            isFilled={i % 2 === 0}
+                                        />
+                                    </g>
+                                    {events.map((event, k) => (
+                                        <rect
+                                            key={k}
+                                            x={x(event.start)}
+                                            height={y.bandwidth()}
+                                            width={
+                                                x(event.end) - x(event.start)
+                                            }
+                                            fill={d3.interpolateRainbow(
+                                                k / (events.length - 1),
+                                            )}
+                                        />
+                                    ))}
                                 </g>
-                                {events.map((event, k) => (
-                                    <rect
-                                        key={k}
-                                        x={x(event.start)}
-                                        height={y.bandwidth()}
-                                        width={x(event.end) - x(event.start)}
-                                        fill={d3.interpolateRainbow(
-                                            k / (events.length - 1),
-                                        )}
-                                    />
-                                ))}
-                                <text
-                                    x={-10}
-                                    y={0}
-                                    fill="black"
-                                    dominantBaseline="hanging"
-                                    textAnchor="end"
-                                >
-                                    {call.callName}
-                                    {call.shards.length > 1
-                                        ? `.${shardIndex}`
-                                        : null}
-                                </text>
-                            </g>
-                        ))}
-                    </g>
-                ))}
-            </g>
-        </svg>
+                            ))}
+                        </g>
+                    ))}
+                </g>
+            </svg>
+        </Box>
     );
 };
 ExecutionChart.propTypes = {

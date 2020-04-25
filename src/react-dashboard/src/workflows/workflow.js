@@ -25,11 +25,6 @@ const useStyles = makeStyles((theme) => ({
         position: 'relative',
         top: 5,
     },
-    chartContainer: {
-        borderColor: theme.palette.divider,
-        borderStyle: 'solid',
-        borderWidth: 1,
-    },
 }));
 
 const distillMetadata = (metadata) => {
@@ -289,9 +284,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Execution chart</Box>
             </Typography>
-            <Box className={classes.chartContainer}>
-                <ExecutionChart workflowCalls={workflowCalls} />
-            </Box>
+            <ExecutionChart workflowCalls={workflowCalls} />
             <Divider />
             {/* Labels */}
             <Typography
