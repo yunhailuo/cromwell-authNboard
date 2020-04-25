@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import Box from '@material-ui/core/Box';
 import PropTypes from 'prop-types';
 import { makeStyles } from '@material-ui/core/styles';
@@ -23,59 +23,58 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const AxisTop = ({ domain = [0, 100], range = [10, 290], ...otherAttrs }) => {
-    const ticks = useMemo(() => {
-        const xScale = d3
-            .scaleLinear()
-            .domain(domain)
-            .range(range);
-
-        const width = range[1] - range[0];
-        const pixelsPerTick = 50;
-        const numberOfTicksTarget = Math.max(
-            1,
-            Math.floor(width / pixelsPerTick),
-        );
-
-        return xScale.ticks(numberOfTicksTarget).map((value) => ({
-            value,
-            xOffset: xScale(value),
-        }));
-    }, [domain, range]);
+// Adapted from d3-axis
+const Axis = ({ scale, orient = 'top' }) => {
+    const values = scale.ticks ? scale.ticks() : scale.domain();
+    const tickSign = orient == 'top' ? -1 : 1;
+    const range = scale.range();
+    const range0 = +range[0] + 0.5;
+    const range1 = +range[range.length - 1] + 0.5;
+    const transform = (data) => `translate(${scale(data) + 0.5}, 0)`;
 
     return (
-        <g transform="translate(30 0)" {...otherAttrs}>
+        <g
+            style={{
+                textAnchor: 'middle',
+            }}
+        >
             <path
-                d={['M', range[0], 25, 'v', 6, 'H', range[1], 'v', -6].join(
-                    ' ',
-                )}
+                d={[
+                    'M',
+                    range0,
+                    tickSign * 6,
+                    'V0.5H',
+                    range1,
+                    'V',
+                    tickSign * 6,
+                ].join(' ')}
                 fill="none"
                 stroke="currentColor"
             />
-            {ticks.map(({ value, xOffset }) => (
-                <g key={value} transform={`translate(${xOffset}, 0)`}>
-                    <line y1="25" y2="31" stroke="currentColor" />
+            {values.map((value) => (
+                <g key={value} transform={transform(value)}>
+                    <line y2={tickSign * 6} stroke="currentColor" />
                     <text
-                        key={value}
-                        style={{
-                            fontSize: '10px',
-                            textAnchor: 'middle',
-                            transform: 'translateY(20px)',
-                        }}
+                        fill="currentColor"
+                        y={tickSign * 9}
+                        dy={
+                            orient === 'top'
+                                ? '0em'
+                                : orient === 'bottom'
+                                    ? '0.71em'
+                                    : '0.32em'
+                        }
                     >
-                        {new Date(value).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                        })}
+                        {scale.tickFormat ? scale.tickFormat()(value) : value}
                     </text>
                 </g>
             ))}
         </g>
     );
 };
-AxisTop.propTypes = {
-    domain: PropTypes.arrayOf(PropTypes.number),
-    range: PropTypes.arrayOf(PropTypes.number),
+Axis.propTypes = {
+    scale: PropTypes.func.isRequired,
+    orient: PropTypes.oneOf(['top', 'bottom']),
 };
 
 const HighlightableStrip = ({ isFilled, ...otherAttrs }) => {
@@ -107,7 +106,7 @@ HighlightableStrip.propTypes = {
     isFilled: PropTypes.bool.isRequired,
 };
 
-export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
+export const ExecutionChart = ({ workflowCalls, width = 1200 }) => {
     const classes = useStyles();
 
     // workflowCalls = [
@@ -152,6 +151,11 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
         .domain(d3.range(cumShardCount[cumShardCount.length - 1]))
         .range([0, plotSize.height])
         .padding(0.4);
+    const axisScale = d3
+        .scaleTime()
+        .domain([new Date(workflowCalls.start), new Date(workflowCalls.end)])
+        .range([0, plotSize.width])
+        .nice();
 
     return (
         <Box
@@ -165,12 +169,11 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
                 viewBox={`0 0 ${width} ${height}`}
                 className={classes.chart}
             >
-                <AxisTop
-                    domain={[workflowCalls.start, workflowCalls.end]}
-                    range={[0, plotSize.width]}
-                    transform={`translate(${plotSize.marginLeft} 0)`}
-                />
-
+                <g
+                    transform={`translate(${plotSize.marginLeft} ${plotSize.marginTop})`}
+                >
+                    <Axis scale={axisScale} orient="top" />
+                </g>
                 <g
                     transform={`translate(${plotSize.marginLeft} ${plotSize.marginTop})`}
                 >
@@ -224,6 +227,13 @@ export const ExecutionChart = ({ workflowCalls, width = 1000 }) => {
                             ))}
                         </g>
                     ))}
+                </g>
+                <g
+                    transform={`translate(${
+                        plotSize.marginLeft
+                    } ${plotSize.marginTop + plotSize.height})`}
+                >
+                    <Axis scale={axisScale} orient="bottom" />
                 </g>
             </svg>
         </Box>
