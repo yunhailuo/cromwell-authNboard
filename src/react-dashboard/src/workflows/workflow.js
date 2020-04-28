@@ -168,6 +168,40 @@ const BasicMetadataTable = (metadata) => {
     );
 };
 
+const OutputsTable = ({ calls }) => {
+    const outputs = {};
+    Object.keys(calls).forEach((callName) => {
+        let shards = calls[callName];
+        if (!Array.isArray(shards)) shards = [shards];
+        shards.forEach((shard) => {
+            if (shard.outputs) {
+                Object.keys(shard.outputs).forEach((shardOutKey) => {
+                    const callOutKey = `${callName}.${shardOutKey}`;
+                    if (outputs[callOutKey]) {
+                        if (Array.isArray(outputs[callOutKey])) {
+                            outputs[callOutKey].push(
+                                shard.outputs[shardOutKey],
+                            );
+                        } else {
+                            outputs[callOutKey] = [
+                                outputs[callOutKey],
+                                shard.outputs[shardOutKey],
+                            ];
+                        }
+                    } else {
+                        outputs[callOutKey] = [shard.outputs[shardOutKey]];
+                    }
+                });
+            }
+        });
+    });
+
+    return <SimpleObjectTable obj={outputs} />;
+};
+OutputsTable.propTypes = {
+    calls: PropTypes.object.isRequired,
+};
+
 const Workflow = ({
     match: {
         params: { uuid },
@@ -257,7 +291,7 @@ const Workflow = ({
             >
                 <Box textAlign="left">Outputs</Box>
             </Typography>
-            <SimpleObjectTable obj={metadata.outputs} />
+            <OutputsTable calls={metadata.calls} />
         </React.Fragment>
     );
 };

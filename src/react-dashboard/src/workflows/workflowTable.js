@@ -32,6 +32,7 @@ const useStyles = makeStyles((theme) => ({
         display: 'block',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
     },
 }));
 

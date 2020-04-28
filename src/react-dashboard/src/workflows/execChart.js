@@ -102,7 +102,7 @@ const extractCallsShardsEvents = (metadata) => {
 // Adapted from d3-axis
 const Axis = ({ scale, orient = 'top' }) => {
     const values = scale.ticks ? scale.ticks() : scale.domain();
-    const tickSign = orient == 'top' ? -1 : 1;
+    const tickSign = orient === 'top' ? -1 : 1;
     const range = scale.range();
     const range0 = +range[0] + 0.5;
     const range1 = +range[range.length - 1] + 0.5;
@@ -127,8 +127,8 @@ const Axis = ({ scale, orient = 'top' }) => {
                 fill="none"
                 stroke="currentColor"
             />
-            {values.map((value) => (
-                <g key={value} transform={transform(value)}>
+            {values.map((value, i) => (
+                <g key={i} transform={transform(value)}>
                     <line y2={tickSign * 6} stroke="currentColor" />
                     <text
                         fill="currentColor"
