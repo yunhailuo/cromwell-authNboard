@@ -1,19 +1,35 @@
 import { AutoSizer, Column, Table, WindowScroller } from 'react-virtualized';
 import React, { useEffect, useState } from 'react';
 import { SortDirection, getTimeString, numberComparator } from '../utils';
+import Box from '@material-ui/core/Box';
+import Button from '@material-ui/core/Button';
+import Checkbox from '@material-ui/core/Checkbox';
 import CircularProgress from '@material-ui/core/CircularProgress';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import FormGroup from '@material-ui/core/FormGroup';
+import IconButton from '@material-ui/core/IconButton';
 import { Link } from 'react-router-dom';
 import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
 import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tooltip from '@material-ui/core/Tooltip';
+import ViewListIcon from '@material-ui/icons/ViewList';
 import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from '../App';
 import { useAuth0 } from '../auth';
 
 const useStyles = makeStyles((theme) => ({
+    tableControl: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+    },
     flexContainer: {
         display: 'flex',
         alignItems: 'center',
@@ -59,6 +75,17 @@ TruncatedWithTooltip.propTypes = {
     label: PropTypes.string.isRequired,
 };
 
+const defaultColumns = [
+    'id',
+    'name',
+    'caperStrLabel',
+    'submission',
+    'waiting',
+    'start',
+    'elapse',
+    'status',
+];
+
 const workflowColumns = {
     id: {
         label: 'ID',
@@ -73,7 +100,6 @@ const workflowColumns = {
     },
     name: {
         label: 'Name',
-        width: 100,
     },
     caperStrLabel: {
         label: 'Caper Label',
@@ -82,7 +108,6 @@ const workflowColumns = {
         display: function longStringDisplay(data) {
             return <TruncatedWithTooltip label={data} />;
         },
-        width: 150,
     },
     submission: {
         label: 'Submitted',
@@ -96,7 +121,6 @@ const workflowColumns = {
             Date.parse(workflow.start) - Date.parse(workflow.submission),
         display: (data) => getTimeString(data),
         comparator: numberComparator,
-        width: 100,
     },
     start: {
         label: 'Start',
@@ -116,11 +140,91 @@ const workflowColumns = {
             Date.parse(workflow.end) - Date.parse(workflow.start),
         display: (data) => getTimeString(data),
         comparator: numberComparator,
-        width: 100,
     },
     status: {
         label: 'Status',
     },
+    metadataArchiveStatus: {
+        label: 'Metadata Archive',
+    },
+};
+
+const TableControl = ({ selectedCols, setSelectedCols }) => {
+    const classes = useStyles();
+    const [colSelectOpen, setColSelectOpen] = React.useState(false);
+    const handleColSelectOpen = () => {
+        setColSelectOpen(true);
+    };
+    const handleColSelect = () => {
+        setSelectedCols(checked);
+        setColSelectOpen(false);
+    };
+    const handleCancelSelect = () => {
+        setColSelectOpen(false);
+    };
+    const handleChange = (event) => {
+        const targetName = event.target.name;
+        const eventIndex = checked.indexOf(targetName);
+        if (eventIndex === -1) {
+            setChecked(
+                Object.keys(workflowColumns).filter(
+                    (col) => checked.indexOf(col) !== -1 || col === targetName,
+                ),
+            );
+        } else {
+            setChecked(checked.filter((col) => col !== targetName));
+        }
+    };
+
+    const [checked, setChecked] = React.useState(selectedCols);
+
+    return (
+        <React.Fragment>
+            <Box className={classes.tableControl}>
+                <IconButton onClick={handleColSelectOpen}>
+                    <ViewListIcon />
+                </IconButton>
+            </Box>
+            <Dialog open={colSelectOpen} onClose={handleCancelSelect}>
+                <DialogTitle>Select and order columns</DialogTitle>
+                <DialogContent>
+                    <FormControl component="fieldset">
+                        <FormGroup>
+                            {Object.keys(workflowColumns).map((colKey) => (
+                                <FormControlLabel
+                                    key={colKey}
+                                    control={
+                                        <Checkbox
+                                            checked={
+                                                checked.indexOf(colKey) !== -1
+                                            }
+                                            onChange={handleChange}
+                                            name={colKey}
+                                        />
+                                    }
+                                    label={
+                                        workflowColumns[colKey].label || colKey
+                                    }
+                                />
+                            ))}
+                        </FormGroup>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleColSelect} color="primary">
+                        Ok
+                    </Button>
+                    <Button onClick={handleCancelSelect} color="primary">
+                        Cancel
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </React.Fragment>
+    );
+};
+TableControl.propTypes = {
+    selectedCols: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setSelectedCols: PropTypes.func.isRequired,
 };
 
 const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
@@ -144,6 +248,11 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
             .finally(() => setLoadingWorkflows(false));
     }, [authorizedFetch, apiVersion, setAppBarTitle]);
 
+    const [selectedCols, setSelectedCols] = useState(
+        Object.keys(workflowColumns).filter(
+            (col) => defaultColumns.indexOf(col) !== -1,
+        ),
+    );
     const headerRenderer = ({ label, dataKey, sortBy, sortDirection }) => {
         return (
             <TableCell
@@ -230,54 +339,62 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     ) : workflows.length < 1 ? (
         <span>No workflow found.</span>
     ) : (
-        <WindowScroller>
-            {({ height }) => (
-                <AutoSizer disableHeight>
-                    {({ width }) => (
-                        <Table
-                            rowCount={workflows.length}
-                            rowGetter={({ index }) => workflows[index]}
-                            height={height - 128}
-                            width={width}
-                            rowHeight={rowHeight}
-                            gridStyle={{
-                                direction: 'inherit',
-                            }}
-                            headerHeight={headerHeight}
-                            rowClassName={clsx(
-                                classes.flexContainer,
-                                classes.tableRowHover,
-                            )}
-                            sort={workflowSort}
-                            sortBy={sortBy}
-                            sortDirection={sortDirection}
-                        >
-                            {Object.keys(workflowColumns).map((colKey) => {
-                                return (
-                                    <Column
-                                        key={colKey}
-                                        headerRenderer={headerRenderer}
-                                        className={classes.flexContainer}
-                                        cellRenderer={cellRenderer}
-                                        cellDataGetter={cellDataGetter}
-                                        dataKey={colKey}
-                                        width={
-                                            workflowColumns[colKey].width || 150
-                                        }
-                                        label={
-                                            workflowColumns[colKey].label || ''
-                                        }
-                                        defaultSortDirection={
-                                            defaultSortDirection
-                                        }
-                                    />
-                                );
-                            })}
-                        </Table>
-                    )}
-                </AutoSizer>
-            )}
-        </WindowScroller>
+        <React.Fragment>
+            <TableControl
+                selectedCols={selectedCols}
+                setSelectedCols={setSelectedCols}
+            />
+            <WindowScroller>
+                {({ height }) => (
+                    <AutoSizer disableHeight>
+                        {({ width }) => (
+                            <Table
+                                rowCount={workflows.length}
+                                rowGetter={({ index }) => workflows[index]}
+                                height={height - 176}
+                                width={width}
+                                rowHeight={rowHeight}
+                                gridStyle={{
+                                    direction: 'inherit',
+                                }}
+                                headerHeight={headerHeight}
+                                rowClassName={clsx(
+                                    classes.flexContainer,
+                                    classes.tableRowHover,
+                                )}
+                                sort={workflowSort}
+                                sortBy={sortBy}
+                                sortDirection={sortDirection}
+                            >
+                                {selectedCols.map((colKey) => {
+                                    return (
+                                        <Column
+                                            key={colKey}
+                                            headerRenderer={headerRenderer}
+                                            className={classes.flexContainer}
+                                            cellRenderer={cellRenderer}
+                                            cellDataGetter={cellDataGetter}
+                                            dataKey={colKey}
+                                            width={
+                                                workflowColumns[colKey].width ||
+                                                width / selectedCols.length
+                                            }
+                                            label={
+                                                workflowColumns[colKey].label ||
+                                                ''
+                                            }
+                                            defaultSortDirection={
+                                                defaultSortDirection
+                                            }
+                                        />
+                                    );
+                                })}
+                            </Table>
+                        )}
+                    </AutoSizer>
+                )}
+            </WindowScroller>
+        </React.Fragment>
     );
 };
 WorkflowTable.propTypes = {
