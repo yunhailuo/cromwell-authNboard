@@ -160,9 +160,10 @@ const BasicMetadataTable = (metadata) => {
                 Backends: Array.from(backends).join(', '),
                 'Machine zones': Array.from(zones).join(', '),
                 'Machine types used': Array.from(machineTypes).join(', '),
-                'Total CPU hours': cpuError || totalCpuHours.toFixed(2),
+                'Total CPU hours':
+                    cpuError.join(', ') || totalCpuHours.toFixed(2),
                 'Total memory GB * hours':
-                    memoryError || totalMemoryHours.toFixed(2),
+                    memoryError.join(', ') || totalMemoryHours.toFixed(2),
             }}
         />
     );
