@@ -169,6 +169,35 @@ const BasicMetadataTable = (metadata) => {
     );
 };
 
+const FailureTable = ({ calls }) => {
+    const failureObj = {};
+    if (calls && Object.keys(calls).length > 0) {
+        Object.keys(calls).forEach((callName) => {
+            let shards = calls[callName];
+            if (!Array.isArray(calls[callName])) {
+                let shards = [shards];
+            }
+            shards.forEach((shard) => {
+                if (shard.failures && shard.failures.length > 0) {
+                    shard.failures.forEach((failure) => {
+                        if (failure.message) {
+                            if (failureObj[callName]) {
+                                failureObj[callName].push(failure.message);
+                            } else {
+                                failureObj[callName] = [failure.message];
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    }
+    return <SimpleObjectTable obj={{ ...failureObj }} />;
+};
+FailureTable.propTypes = {
+    calls: PropTypes.object.isRequired,
+};
+
 const OutputsTable = ({ calls }) => {
     const outputs = {};
     Object.keys(calls).forEach((callName) => {
@@ -252,6 +281,20 @@ const Workflow = ({
                 </Box>
             </Typography>
             <BasicMetadataTable {...metadata} />
+            {/* Failures */}
+            {metadata.status === 'Failed' ? (
+                <React.Fragment>
+                    <Typography
+                        component="h4"
+                        variant="h6"
+                        color="secondary"
+                        className={classes.subtitle}
+                    >
+                        <Box textAlign="left">Failures</Box>
+                    </Typography>
+                    <FailureTable calls={metadata.calls} />
+                </React.Fragment>
+            ) : null}
             {/* Execution time */}
             <Typography
                 component="h4"
