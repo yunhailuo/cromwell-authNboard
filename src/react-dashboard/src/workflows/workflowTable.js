@@ -1,25 +1,30 @@
 import { AutoSizer, Column, Table, WindowScroller } from 'react-virtualized';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { SortDirection, getTimeString, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import CircularProgress from '@material-ui/core/CircularProgress';
+import ClickAwayListener from '@material-ui/core/ClickAwayListener';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
+import FilterListIcon from '@material-ui/icons/FilterList';
 import FormControl from '@material-ui/core/FormControl';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormGroup from '@material-ui/core/FormGroup';
 import IconButton from '@material-ui/core/IconButton';
 import { Link } from 'react-router-dom';
 import LinkStyle from '@material-ui/core/Link';
+import Paper from '@material-ui/core/Paper';
+import Popper from '@material-ui/core/Popper';
 import PropTypes from 'prop-types';
 import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tooltip from '@material-ui/core/Tooltip';
 import ViewListIcon from '@material-ui/icons/ViewList';
+import { arrayEqual } from '../utils';
 import clsx from 'clsx';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from '../App';
@@ -34,6 +39,13 @@ const useStyles = makeStyles((theme) => ({
         display: 'flex',
         alignItems: 'center',
         boxSizing: 'border-box',
+    },
+    filterButton: {
+        marginLeft: 'auto',
+    },
+    filterItem: {
+        paddingLeft: theme.spacing(2),
+        paddingRight: theme.spacing(2),
     },
     tableRowHover: {
         '&:hover': {
@@ -227,6 +239,166 @@ TableControl.propTypes = {
     setSelectedCols: PropTypes.func.isRequired,
 };
 
+const FilterControl = ({ filtered = false, children }) => {
+    const classes = useStyles();
+    const [open, setOpen] = useState(false);
+    const anchorRef = useRef(null);
+
+    const handleToggle = (event) => {
+        event.stopPropagation();
+        setOpen((prevOpen) => !prevOpen);
+    };
+
+    const handleClickAway = (event) => {
+        if (anchorRef.current && anchorRef.current.contains(event.target)) {
+            return;
+        }
+        setOpen(false);
+    };
+
+    // return focus to the button when we transitioned from !open -> open
+    const prevOpen = useRef(open);
+    useEffect(() => {
+        if (prevOpen.current === true && open === false) {
+            anchorRef.current.focus();
+        }
+
+        prevOpen.current = open;
+    }, [open]);
+
+    return (
+        <React.Fragment>
+            <IconButton
+                className={classes.filterButton}
+                ref={anchorRef}
+                onClick={handleToggle}
+                color={filtered ? 'secondary' : 'default'}
+            >
+                <FilterListIcon />
+            </IconButton>
+            <Popper
+                open={open}
+                anchorEl={anchorRef.current}
+                placement="bottom-end"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <Paper>
+                    <ClickAwayListener onClickAway={handleClickAway}>
+                        {children}
+                    </ClickAwayListener>
+                </Paper>
+            </Popper>
+        </React.Fragment>
+    );
+};
+FilterControl.propTypes = {
+    filtered: PropTypes.bool,
+    children: PropTypes.node,
+};
+
+const workflowDataGetter = ({ dataKey: colId, rowData: workflow }) => {
+    return workflowColumns[colId].getData
+        ? workflowColumns[colId].getData(workflow)
+        : workflow[colId];
+};
+
+const SelectFilter = React.forwardRef(
+    ({ colId, workflows, filters, dispatchFilters }, ref) => {
+        const classes = useStyles();
+        const allOptionSet = new Set();
+        workflows.forEach((workflow) => {
+            allOptionSet.add(
+                workflowDataGetter({ dataKey: colId, rowData: workflow }) || '',
+            );
+        });
+        const allOptions = Array.from(allOptionSet).sort();
+        const [checked, setChecked] = useState(
+            (filters[colId] && filters[colId].filterProps) || allOptions,
+        );
+        const filterFactory = (filterProps) => (workflow) =>
+            filterProps.includes(
+                workflowDataGetter({ dataKey: colId, rowData: workflow }) || '',
+            );
+        const handleChange = (event) => {
+            const newChecked = checked.includes(event.target.name)
+                ? checked.filter((v) => v !== event.target.name)
+                : [...checked, event.target.name].sort();
+            setChecked(newChecked);
+            arrayEqual(newChecked, allOptions)
+                ? dispatchFilters({ type: 'REMOVE', colId })
+                : dispatchFilters({
+                    type: 'UPDATE',
+                    colId,
+                    filterProps: newChecked,
+                    filterFactory: filterFactory,
+                });
+        };
+        const handleSelectAll = () => {
+            if (arrayEqual(checked, allOptions)) {
+                setChecked([]);
+                dispatchFilters({
+                    type: 'UPDATE',
+                    colId,
+                    filterProps: [],
+                    filterFactory: filterFactory,
+                });
+            } else {
+                setChecked(allOptions);
+                dispatchFilters({ type: 'REMOVE', colId });
+            }
+        };
+
+        return (
+            <FormGroup ref={ref}>
+                <FormControlLabel
+                    className={classes.filterItem}
+                    control={
+                        <Checkbox
+                            name="Select all"
+                            checked={arrayEqual(checked, allOptions)}
+                            onChange={handleSelectAll}
+                        />
+                    }
+                    label="Select all"
+                />
+                {allOptions.map((option) => (
+                    <FormControlLabel
+                        key={option}
+                        className={classes.filterItem}
+                        control={
+                            <Checkbox
+                                name={option}
+                                checked={checked.includes(option)}
+                                onChange={handleChange}
+                            />
+                        }
+                        label={option}
+                    />
+                ))}
+            </FormGroup>
+        );
+    },
+);
+SelectFilter.propTypes = {
+    colId: PropTypes.string.isRequired,
+    workflows: PropTypes.arrayOf(PropTypes.object).isRequired,
+    filters: PropTypes.object.isRequired,
+    dispatchFilters: PropTypes.func.isRequired,
+};
+SelectFilter.displayName = 'SelectFilter';
+
+const columnFilters = {
+    name: function nameFilterFactory(props) {
+        return <SelectFilter colId="name" {...props} />;
+    },
+    status: function statusFilterFactory(props) {
+        return <SelectFilter colId="status" {...props} />;
+    },
+    metadataArchiveStatus: function archiveFilterFactory(props) {
+        return <SelectFilter colId="metadataArchiveStatus" {...props} />;
+    },
+};
+
 const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
@@ -248,11 +420,40 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
             .finally(() => setLoadingWorkflows(false));
     }, [authorizedFetch, apiVersion, setAppBarTitle]);
 
-    const [selectedCols, setSelectedCols] = useState(
-        Object.keys(workflowColumns).filter(
-            (col) => defaultColumns.indexOf(col) !== -1,
-        ),
+    const filtersReducer = (state, action) => {
+        const newState = { ...state };
+        switch (action.type) {
+        case 'UPDATE':
+            newState[action.colId] = {
+                filterProps: action.filterProps,
+                filterFactory: action.filterFactory,
+            };
+            return newState;
+        case 'REMOVE':
+            delete newState[action.colId];
+            return newState;
+        default:
+            console.error(`Unknown filter action ${action.type}!`);
+        }
+    };
+    const [filters, dispatchFilters] = useReducer(filtersReducer, {});
+    const [filteredWorkflows, setFilteredWorkflows] = useState(workflows);
+    useEffect(
+        () =>
+            setFilteredWorkflows(
+                workflows.filter((workflow) =>
+                    Object.keys(filters)
+                        .map((colId) =>
+                            filters[colId].filterFactory(
+                                filters[colId].filterProps,
+                            )(workflow),
+                        )
+                        .every(Boolean),
+                ),
+            ),
+        [workflows, filters, setFilteredWorkflows],
     );
+
     const headerRenderer = ({ label, dataKey, sortBy, sortDirection }) => {
         return (
             <TableCell
@@ -273,6 +474,15 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
                 >
                     <strong>{label}</strong>
                 </TableSortLabel>
+                {columnFilters[dataKey] ? (
+                    <FilterControl filtered={Boolean(filters[dataKey])}>
+                        {columnFilters[dataKey]({
+                            workflows,
+                            filters,
+                            dispatchFilters,
+                        })}
+                    </FilterControl>
+                ) : null}
             </TableCell>
         );
     };
@@ -282,16 +492,6 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         sortBy: PropTypes.string.isRequired,
         sortDirection: PropTypes.oneOf([SortDirection.ASC, SortDirection.DESC])
             .isRequired,
-    };
-
-    const cellDataGetter = ({ dataKey, rowData }) => {
-        return workflowColumns[dataKey].getData
-            ? workflowColumns[dataKey].getData(rowData)
-            : rowData[dataKey];
-    };
-    cellDataGetter.propTypes = {
-        dataKey: PropTypes.string.isRequired,
-        rowData: PropTypes.object.isRequired,
     };
 
     const cellRenderer = ({ dataKey, cellData }) => {
@@ -320,19 +520,35 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const workflowSort = ({ sortBy, sortDirection }) => {
         setSortBy(sortBy);
         setSortDirection(sortDirection);
-        const stabilizedWorkflows = workflows.map((el, index) => [el, index]);
+    };
+    const [sortedWorkflows, setSortedWorkflows] = useState(workflows);
+    useEffect(() => {
+        if (!sortBy || !sortDirection) {
+            setSortedWorkflows(filteredWorkflows);
+            return;
+        }
+        const stabilizedWorkflows = filteredWorkflows.map((el, index) => [
+            el,
+            index,
+        ]);
         const comparator =
             workflowColumns[sortBy].comparator || defaultComparator;
         stabilizedWorkflows.sort(
             (a, b) =>
                 comparator(
-                    cellDataGetter({ dataKey: sortBy, rowData: a[0] }),
-                    cellDataGetter({ dataKey: sortBy, rowData: b[0] }),
+                    workflowDataGetter({ dataKey: sortBy, rowData: a[0] }),
+                    workflowDataGetter({ dataKey: sortBy, rowData: b[0] }),
                     sortDirection,
                 ) || a[1] - b[1],
         );
-        setWorkflows(stabilizedWorkflows.map((el) => el[0]));
-    };
+        setSortedWorkflows(stabilizedWorkflows.map((el) => el[0]));
+    }, [filteredWorkflows, sortBy, sortDirection, setSortedWorkflows]);
+
+    const [selectedCols, setSelectedCols] = useState(
+        Object.keys(workflowColumns).filter(
+            (col) => defaultColumns.indexOf(col) !== -1,
+        ),
+    );
 
     return loadingWorkflows ? (
         <CircularProgress />
@@ -349,8 +565,10 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
                     <AutoSizer disableHeight>
                         {({ width }) => (
                             <Table
-                                rowCount={workflows.length}
-                                rowGetter={({ index }) => workflows[index]}
+                                rowCount={sortedWorkflows.length}
+                                rowGetter={({ index }) =>
+                                    sortedWorkflows[index]
+                                }
                                 height={height - 176}
                                 width={width}
                                 rowHeight={rowHeight}
@@ -373,7 +591,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
                                             headerRenderer={headerRenderer}
                                             className={classes.flexContainer}
                                             cellRenderer={cellRenderer}
-                                            cellDataGetter={cellDataGetter}
+                                            cellDataGetter={workflowDataGetter}
                                             dataKey={colKey}
                                             width={
                                                 workflowColumns[colKey].width ||

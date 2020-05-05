@@ -76,3 +76,12 @@ export const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
     const descOrder = Math.sign(b - a);
     return sortDirection === SortDirection.DESC ? descOrder : -descOrder;
 };
+
+export const arrayEqual = (array1, array2) => {
+    array1.sort();
+    array2.sort();
+    return (
+        array1.length === array2.length &&
+        array1.every((value, index) => value === array2[index])
+    );
+};
