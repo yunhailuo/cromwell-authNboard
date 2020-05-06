@@ -78,10 +78,10 @@ export const numberComparator = (a, b, sortDirection = SortDirection.DESC) => {
 };
 
 export const arrayEqual = (array1, array2) => {
-    array1.sort();
-    array2.sort();
+    const sortedArray1 = array1.slice(0).sort();
+    const sortedArray2 = array2.slice(0).sort();
     return (
         array1.length === array2.length &&
-        array1.every((value, index) => value === array2[index])
+        sortedArray1.every((value, index) => value === sortedArray2[index])
     );
 };

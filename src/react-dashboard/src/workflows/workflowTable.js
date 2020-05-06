@@ -3,7 +3,6 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { SortDirection, getTimeString, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import Checkbox from '@material-ui/core/Checkbox';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
@@ -46,14 +45,12 @@ const useStyles = makeStyles((theme) => ({
         alignItems: 'center',
         boxSizing: 'border-box',
     },
-    filterButton: {
-        marginLeft: 'auto',
-    },
     fixedWidthFilter: {
         width: 200,
     },
     filterItems: {
-        padding: theme.spacing(2),
+        paddingLeft: theme.spacing(3),
+        paddingRight: theme.spacing(2),
     },
     filterItemCenter: {
         alignItems: 'center',
@@ -103,7 +100,6 @@ const defaultColumns = [
     'name',
     'caperStrLabel',
     'submission',
-    'waiting',
     'start',
     'elapse',
     'status',
@@ -123,7 +119,6 @@ const workflowColumns = {
     },
     name: {
         label: 'Name',
-        width: 130,
     },
     caperStrLabel: {
         label: 'Caper Label',
@@ -252,7 +247,6 @@ TableControl.propTypes = {
 };
 
 const FilterControl = ({ filtered = false, children }) => {
-    const classes = useStyles();
     const [open, setOpen] = useState(false);
     const anchorRef = useRef(null);
 
@@ -281,12 +275,11 @@ const FilterControl = ({ filtered = false, children }) => {
     return (
         <React.Fragment>
             <IconButton
-                className={classes.filterButton}
                 ref={anchorRef}
                 onClick={handleToggle}
                 color={filtered ? 'secondary' : 'default'}
             >
-                <FilterListIcon />
+                <FilterListIcon fontSize="small" />
             </IconButton>
             <Popper
                 open={open}
@@ -481,7 +474,11 @@ const SliderFilter = React.forwardRef(
                 dataKey: colId,
                 rowData: workflow,
             });
-            return data >= filterProps[0] && data <= filterProps[1];
+            return (
+                !isNaN(data) &&
+                data >= Math.min(...filterProps) &&
+                data <= Math.max(...filterProps)
+            );
         };
         const [value, setValue] = React.useState(
             filters[colId] ? filters[colId].filterProps : sliderRange,
@@ -489,9 +486,8 @@ const SliderFilter = React.forwardRef(
         const handleChange = (event, newValue) => {
             setValue(newValue);
         };
-        const handleSubmit = (event) => {
-            event.preventDefault();
-            return arrayEqual(value, sliderRange)
+        const handleChangeCommitted = () =>
+            arrayEqual(value, sliderRange)
                 ? filters[colId]
                     ? dispatchFilters({ type: 'REMOVE', colId })
                     : null
@@ -501,7 +497,6 @@ const SliderFilter = React.forwardRef(
                     filterProps: value,
                     filterFactory: filterFactory,
                 });
-        };
         const handleReset = () => {
             if (filters[colId]) {
                 dispatchFilters({ type: 'REMOVE', colId });
@@ -518,24 +513,18 @@ const SliderFilter = React.forwardRef(
                         classes.filterItems,
                         classes.filterItemCenter,
                     )}
-                    component="form"
-                    onSubmit={handleSubmit}
                 >
-                    <Grid item xs={12}>
+                    <Grid item xs>
                         <Slider
-                            min={sliderRange[0]}
-                            max={sliderRange[1]}
+                            min={Math.min(...sliderRange)}
+                            max={Math.max(...sliderRange)}
                             value={value}
                             onChange={handleChange}
+                            onChangeCommitted={handleChangeCommitted}
                             valueLabelDisplay="on"
                             valueLabelFormat={valueDisplay || ((x) => x)}
                             ValueLabelComponent={SliderLabelComponent}
                         />
-                    </Grid>
-                    <Grid item>
-                        <IconButton type="submit">
-                            <CheckCircleIcon color="primary" />
-                        </IconButton>
                     </Grid>
                     <Grid item>
                         <IconButton onClick={handleReset}>

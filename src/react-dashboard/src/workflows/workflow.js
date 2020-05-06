@@ -175,7 +175,7 @@ const FailureTable = ({ calls }) => {
         Object.keys(calls).forEach((callName) => {
             let shards = calls[callName];
             if (!Array.isArray(calls[callName])) {
-                let shards = [shards];
+                shards = [shards];
             }
             shards.forEach((shard) => {
                 if (shard.failures && shard.failures.length > 0) {
