@@ -3,6 +3,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { SortDirection, getTimeString, numberComparator } from '../utils';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
+import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import Checkbox from '@material-ui/core/Checkbox';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
@@ -14,12 +15,17 @@ import FilterListIcon from '@material-ui/icons/FilterList';
 import FormControl from '@material-ui/core/FormControl';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import FormGroup from '@material-ui/core/FormGroup';
+import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
+import InputBase from '@material-ui/core/InputBase';
 import { Link } from 'react-router-dom';
 import LinkStyle from '@material-ui/core/Link';
 import Paper from '@material-ui/core/Paper';
 import Popper from '@material-ui/core/Popper';
 import PropTypes from 'prop-types';
+import ReplayIcon from '@material-ui/icons/Replay';
+import SearchIcon from '@material-ui/icons/Search';
+import Slider from '@material-ui/core/Slider';
 import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -43,9 +49,14 @@ const useStyles = makeStyles((theme) => ({
     filterButton: {
         marginLeft: 'auto',
     },
-    filterItem: {
-        paddingLeft: theme.spacing(2),
-        paddingRight: theme.spacing(2),
+    fixedWidthFilter: {
+        width: 200,
+    },
+    filterItems: {
+        padding: theme.spacing(2),
+    },
+    filterItemCenter: {
+        alignItems: 'center',
     },
     tableRowHover: {
         '&:hover': {
@@ -112,6 +123,7 @@ const workflowColumns = {
     },
     name: {
         label: 'Name',
+        width: 130,
     },
     caperStrLabel: {
         label: 'Caper Label',
@@ -122,7 +134,7 @@ const workflowColumns = {
         },
     },
     submission: {
-        label: 'Submitted',
+        label: 'Submit',
         getData: (workflow) => Date.parse(workflow.submission),
         display: (data) => (data ? new Date(data).toLocaleString() : null),
         comparator: numberComparator,
@@ -349,9 +361,8 @@ const SelectFilter = React.forwardRef(
         };
 
         return (
-            <FormGroup ref={ref}>
+            <FormGroup ref={ref} className={classes.filterItems}>
                 <FormControlLabel
-                    className={classes.filterItem}
                     control={
                         <Checkbox
                             name="Select all"
@@ -364,7 +375,6 @@ const SelectFilter = React.forwardRef(
                 {allOptions.map((option) => (
                     <FormControlLabel
                         key={option}
-                        className={classes.filterItem}
                         control={
                             <Checkbox
                                 name={option}
@@ -387,9 +397,219 @@ SelectFilter.propTypes = {
 };
 SelectFilter.displayName = 'SelectFilter';
 
+const StringFilter = React.forwardRef(
+    ({ colId, filters, dispatchFilters }, ref) => {
+        const filterFactory = (filterProps) => (workflow) =>
+            (
+                workflowDataGetter({
+                    dataKey: colId,
+                    rowData: workflow,
+                }).toLowerCase() || ''
+            ).includes(filterProps.toLowerCase());
+        const [filterString, setFilterString] = useState(
+            filters[colId] ? filters[colId].filterProps || '' : '',
+        );
+        const handleInputChange = (event) =>
+            setFilterString(event.target.value || '');
+        const handleSubmit = (event) => {
+            event.preventDefault();
+            return filterString
+                ? dispatchFilters({
+                    type: 'UPDATE',
+                    colId,
+                    filterProps: filterString,
+                    filterFactory: filterFactory,
+                })
+                : filters[colId]
+                    ? dispatchFilters({ type: 'REMOVE', colId })
+                    : null;
+        };
+        return (
+            <Paper component="form" ref={ref} onSubmit={handleSubmit}>
+                <IconButton type="submit" aria-label="search">
+                    <SearchIcon />
+                </IconButton>
+                <InputBase
+                    autoFocus
+                    value={filterString}
+                    onChange={handleInputChange}
+                />
+            </Paper>
+        );
+    },
+);
+StringFilter.propTypes = {
+    colId: PropTypes.string.isRequired,
+    filters: PropTypes.object.isRequired,
+    dispatchFilters: PropTypes.func.isRequired,
+};
+StringFilter.displayName = 'StringFilter';
+
+const SliderLabelComponent = ({ children, index, open, value }) => (
+    <Tooltip
+        open={open}
+        enterTouchDelay={0}
+        placement={index === 0 ? 'top' : 'bottom'}
+        title={value}
+    >
+        {children}
+    </Tooltip>
+);
+SliderLabelComponent.propTypes = {
+    children: PropTypes.element.isRequired,
+    index: PropTypes.number.isRequired,
+    open: PropTypes.bool.isRequired,
+    value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+};
+const SliderFilter = React.forwardRef(
+    ({ colId, workflows, filters, dispatchFilters, valueDisplay }, ref) => {
+        const classes = useStyles();
+        const sliderRange = workflows.reduce(
+            (range, workflow) => {
+                const data =
+                    workflowDataGetter({ dataKey: colId, rowData: workflow }) ||
+                    NaN;
+                return [
+                    !isNaN(data) && data < range[0] ? data : range[0],
+                    !isNaN(data) && data > range[1] ? data : range[1],
+                ];
+            },
+            [+Infinity, -Infinity],
+        );
+        const filterFactory = (filterProps) => (workflow) => {
+            const data = workflowDataGetter({
+                dataKey: colId,
+                rowData: workflow,
+            });
+            return data >= filterProps[0] && data <= filterProps[1];
+        };
+        const [value, setValue] = React.useState(
+            filters[colId] ? filters[colId].filterProps : sliderRange,
+        );
+        const handleChange = (event, newValue) => {
+            setValue(newValue);
+        };
+        const handleSubmit = (event) => {
+            event.preventDefault();
+            return arrayEqual(value, sliderRange)
+                ? filters[colId]
+                    ? dispatchFilters({ type: 'REMOVE', colId })
+                    : null
+                : dispatchFilters({
+                    type: 'UPDATE',
+                    colId,
+                    filterProps: value,
+                    filterFactory: filterFactory,
+                });
+        };
+        const handleReset = () => {
+            if (filters[colId]) {
+                dispatchFilters({ type: 'REMOVE', colId });
+            }
+            setValue(sliderRange);
+        };
+
+        return (
+            <Paper ref={ref} className={classes.fixedWidthFilter}>
+                <Grid
+                    container
+                    spacing={2}
+                    className={clsx(
+                        classes.filterItems,
+                        classes.filterItemCenter,
+                    )}
+                    component="form"
+                    onSubmit={handleSubmit}
+                >
+                    <Grid item xs={12}>
+                        <Slider
+                            min={sliderRange[0]}
+                            max={sliderRange[1]}
+                            value={value}
+                            onChange={handleChange}
+                            valueLabelDisplay="on"
+                            valueLabelFormat={valueDisplay || ((x) => x)}
+                            ValueLabelComponent={SliderLabelComponent}
+                        />
+                    </Grid>
+                    <Grid item>
+                        <IconButton type="submit">
+                            <CheckCircleIcon color="primary" />
+                        </IconButton>
+                    </Grid>
+                    <Grid item>
+                        <IconButton onClick={handleReset}>
+                            <ReplayIcon color="primary" />
+                        </IconButton>
+                    </Grid>
+                </Grid>
+            </Paper>
+        );
+    },
+);
+SliderFilter.propTypes = {
+    colId: PropTypes.string.isRequired,
+    workflows: PropTypes.arrayOf(PropTypes.object).isRequired,
+    filters: PropTypes.object.isRequired,
+    dispatchFilters: PropTypes.func.isRequired,
+    valueDisplay: PropTypes.func,
+};
+SliderFilter.displayName = 'SliderFilter';
+
 const columnFilters = {
+    id: function idFilterFactory(props) {
+        return <StringFilter colId="id" {...props} />;
+    },
     name: function nameFilterFactory(props) {
         return <SelectFilter colId="name" {...props} />;
+    },
+    caperStrLabel: function caperLabelFilterFactory(props) {
+        return <StringFilter colId="caperStrLabel" {...props} />;
+    },
+    submission: function submissionFilterFactory(props) {
+        return (
+            <SliderFilter
+                colId="submission"
+                {...props}
+                valueDisplay={workflowColumns.submission.display}
+            />
+        );
+    },
+    waiting: function waitingFilterFactory(props) {
+        return (
+            <SliderFilter
+                colId="waiting"
+                {...props}
+                valueDisplay={workflowColumns.waiting.display}
+            />
+        );
+    },
+    start: function startFilterFactory(props) {
+        return (
+            <SliderFilter
+                colId="start"
+                {...props}
+                valueDisplay={workflowColumns.start.display}
+            />
+        );
+    },
+    end: function endFilterFactory(props) {
+        return (
+            <SliderFilter
+                colId="end"
+                {...props}
+                valueDisplay={workflowColumns.end.display}
+            />
+        );
+    },
+    elapse: function elapseFilterFactory(props) {
+        return (
+            <SliderFilter
+                colId="elapse"
+                {...props}
+                valueDisplay={workflowColumns.elapse.display}
+            />
+        );
     },
     status: function statusFilterFactory(props) {
         return <SelectFilter colId="status" {...props} />;
