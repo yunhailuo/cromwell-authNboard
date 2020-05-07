@@ -99,6 +99,7 @@ const defaultColumns = [
     'id',
     'name',
     'caperStrLabel',
+    'caperUser',
     'submission',
     'start',
     'elapse',
@@ -124,6 +125,14 @@ const workflowColumns = {
         label: 'Caper Label',
         getData: (workflow) =>
             (workflow.labels && workflow.labels['caper-str-label']) || '',
+        display: function longStringDisplay(data) {
+            return <TruncatedWithTooltip label={data} />;
+        },
+    },
+    caperUser: {
+        label: 'Caper User',
+        getData: (workflow) =>
+            (workflow.labels && workflow.labels['caper-user']) || '',
         display: function longStringDisplay(data) {
             return <TruncatedWithTooltip label={data} />;
         },
@@ -554,6 +563,9 @@ const columnFilters = {
     },
     caperStrLabel: function caperLabelFilterFactory(props) {
         return <StringFilter colId="caperStrLabel" {...props} />;
+    },
+    caperUser: function caperUserFilterFactory(props) {
+        return <SelectFilter colId="caperUser" {...props} />;
     },
     submission: function submissionFilterFactory(props) {
         return (
