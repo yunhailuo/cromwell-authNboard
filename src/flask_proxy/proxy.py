@@ -6,17 +6,24 @@ from auth import requires_auth
 proxy = Blueprint('proxy', __name__,)
 
 
-@proxy.route('/api/<path:subpath>', methods=['GET'])
+@proxy.route('/api/workflows/<path:subpath>', methods=['GET'])
 @requires_auth(permissions=['read:workflows'])
-def api_get(subpath):
-    return proxy_request('api/{}'.format(subpath.lstrip('/')))
+def get_workflows(subpath):
+    return proxy_request()
+
+
+@proxy.route('/api/workflows/<path:subpath>/abort', methods=['POST'])
+@proxy.route('/api/workflows/<path:subpath>/releaseHold', methods=['POST'])
+@requires_auth(permissions=['update:workflows'])
+def abort_release_workflow(subpath):
+    return proxy_request()
 
 
 @proxy.route('/api/workflows/<path:subpath>', methods=['POST'])
 @requires_auth(
     permissions=['create:workflows', 'update:workflows']
 )
-def workflows_post(subpath):
+def post_workflows(subpath):
     return proxy_request('api/workflows/{}'.format(subpath.lstrip('/')))
 
 
@@ -25,22 +32,24 @@ def workflows_post(subpath):
     permissions=['read:workflows', 'create:workflows', 'update:workflows']
 )
 def womtool(subpath):
-    return proxy_request('api/womtool/{}'.format(subpath.lstrip('/')))
+    return proxy_request()
 
 
 @proxy.route('/engine/<path:subpath>', methods=['GET'])
 @requires_auth(permissions=['read:workflows'])
-def engine_get(subpath):
-    return proxy_request('engine/{}'.format(subpath.lstrip('/')))
+def engine(subpath):
+    return proxy_request()
 
 
 @proxy.route('/swagger/cromwell.yaml', methods=['GET'])
 @requires_auth
 def get_api_swagger_doc():
-    return proxy_request('swagger/cromwell.yaml')
+    return proxy_request()
 
 
-def proxy_request(path):
+def proxy_request(path=None):
+    if not path:
+        path = request.path
     response = requests.request(
         request.method,
         '{}/{}'.format(
