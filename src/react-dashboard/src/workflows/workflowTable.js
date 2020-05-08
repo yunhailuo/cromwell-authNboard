@@ -28,6 +28,7 @@ import Slider from '@material-ui/core/Slider';
 import TableCell from '@material-ui/core/TableCell';
 import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tooltip from '@material-ui/core/Tooltip';
+import Typography from '@material-ui/core/Typography';
 import ViewListIcon from '@material-ui/icons/ViewList';
 import { arrayEqual } from '../utils';
 import clsx from 'clsx';
@@ -36,9 +37,20 @@ import { useApp } from '../App';
 import { useAuth0 } from '../auth';
 
 const useStyles = makeStyles((theme) => ({
+    titleGridContainer: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        justifyItems: 'center',
+    },
+    titleGridCenter: {
+        gridColumn: 2,
+        paddingTop: theme.spacing(1),
+        paddingBottom: theme.spacing(3),
+    },
     tableControl: {
-        display: 'flex',
-        justifyContent: 'flex-end',
+        alignSelf: 'flex-end',
+        gridColumn: 3,
+        marginLeft: 'auto',
     },
     flexContainer: {
         display: 'flex',
@@ -624,7 +636,7 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(() => setAppBarTitle('Workflows'), [setAppBarTitle]);
+    useEffect(() => setAppBarTitle('Workflow summary'), [setAppBarTitle]);
 
     const [loadingWorkflows, setLoadingWorkflows] = useState(true);
     const [workflows, setWorkflows] = useState([]);
@@ -634,7 +646,6 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         )
             .then((res) => res.json())
             .then((res) => {
-                setAppBarTitle(`${res.results.length} workflows`);
                 setWorkflows(res.results);
             })
             .catch((err) => console.error(err))
@@ -777,10 +788,22 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         <span>No workflow found.</span>
     ) : (
         <React.Fragment>
-            <TableControl
-                selectedCols={selectedCols}
-                setSelectedCols={setSelectedCols}
-            />
+            <Grid container spacing={3} className={classes.titleGridContainer}>
+                <Typography
+                    component="div"
+                    variant="h5"
+                    className={classes.titleGridCenter}
+                >
+                    {sortedWorkflows.length === workflows.length
+                        ? ''
+                        : `${sortedWorkflows.length} of `}
+                    {workflows.length} workflows
+                </Typography>
+                <TableControl
+                    selectedCols={selectedCols}
+                    setSelectedCols={setSelectedCols}
+                />
+            </Grid>
             <WindowScroller>
                 {({ height }) => (
                     <AutoSizer disableHeight>
