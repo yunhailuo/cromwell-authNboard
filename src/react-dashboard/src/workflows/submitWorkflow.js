@@ -15,6 +15,10 @@ const useStyles = makeStyles((theme) => ({
         width: '96%',
         alignItems: 'flex-end',
         justifyContent: 'center',
+        borderWidth: '30px 0 30px 0',
+        borderStyle: 'solid',
+        borderImage:
+            'repeating-linear-gradient(60deg, black, black 35px, #ff0 35px, #ff0 70px) 60',
     },
     fileInputContainer: {
         display: 'flex',
