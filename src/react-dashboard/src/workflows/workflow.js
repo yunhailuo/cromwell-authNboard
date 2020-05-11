@@ -247,7 +247,12 @@ const Workflow = ({
     const [metadataDownloadUrl, setMetadataDownloadUrl] = useState();
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
             .then((res) => {
                 setAppBarTitle(`${res.workflowName} (${uuid}): ${res.status}`);
                 const downloadUrl = URL.createObjectURL(

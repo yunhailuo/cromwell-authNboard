@@ -105,8 +105,15 @@ const WomTool = () => {
             method: 'POST',
             body: womFormData,
         })
-            .then((res) => res.json())
-            .then((res) => setWomResult(JSON.stringify(res)));
+            .then((res) => {
+                if (!res.ok) {
+                    setWomResult(res.statusText);
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
+            .then((res) => setWomResult(JSON.stringify(res)))
+            .catch((err) => console.error(err));
     };
 
     return (

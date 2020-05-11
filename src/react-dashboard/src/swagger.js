@@ -15,7 +15,13 @@ const ApiDoc = () => {
 
     useEffect(() => {
         authorizedFetch('/swagger/cromwell.yaml')
-            .then((res) => res.text())
+            .then((res) => {
+                if (!res.ok) {
+                    apiDocContainer.current.textContent = res.statusText;
+                    throw new Error(res.statusText);
+                }
+                return res.text();
+            })
             .then((res) =>
                 SwaggerUI({
                     domNode: apiDocContainer.current,

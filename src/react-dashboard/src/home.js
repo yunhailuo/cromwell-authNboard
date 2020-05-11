@@ -39,8 +39,14 @@ const ServerTile = () => {
     const [engineStatus, setEngineStatus] = useState('');
     useEffect(() => {
         authorizedFetch(`/engine/${apiVersion}/status`)
-            .then((res) => res.statusText)
-            .then((res) => setEngineStatus(res))
+            .then((res) => {
+                if (!res.ok) {
+                    setEngineStatus(res.statusText);
+                    throw new Error(res.statusText);
+                }
+                return res.statusText;
+            })
+            .then((res) => setEngineStatus(`Status: ${res}`))
             .catch((err) => console.error(err));
     }, [authorizedFetch, apiVersion]);
 
@@ -57,8 +63,8 @@ const ServerTile = () => {
                 >
                     Cromwell server {apiVersion}
                 </Typography>
-                <Typography component="p" variant="button">
-                    Status: {engineStatus}
+                <Typography component="p" variant="subtitle1">
+                    {engineStatus}
                 </Typography>
             </Paper>
         </Grid>
@@ -69,10 +75,15 @@ const WorkflowSummaryTile = () => {
     const { authorizedFetch } = useAuth0();
     const { apiVersion } = useApp();
 
-    const [workflowSummary, setWorkflowSummary] = useState({});
+    const [workflowSummary, setWorkflowSummary] = useState();
     useEffect(() => {
         authorizedFetch(`/api/workflows/${apiVersion}/query`)
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
             .then((res) => {
                 const summary = res.results.reduce((acc, res) => {
                     if (res.status in acc) {
@@ -89,7 +100,7 @@ const WorkflowSummaryTile = () => {
 
     const classes = useStyles();
 
-    return (
+    return workflowSummary ? (
         <Grid item xs={12} md={4} lg={3}>
             <Paper className={classes.fixedHeightPaper}>
                 <Typography
@@ -115,7 +126,7 @@ const WorkflowSummaryTile = () => {
                 </List>
             </Paper>
         </Grid>
-    );
+    ) : null;
 };
 
 const Home = () => {

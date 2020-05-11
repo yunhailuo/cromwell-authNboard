@@ -644,7 +644,12 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         authorizedFetch(
             `/api/workflows/${apiVersion}/query?additionalQueryResultFields=labels`,
         )
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
             .then((res) => {
                 setWorkflows(res.results);
             })
@@ -782,11 +787,11 @@ const WorkflowTable = ({ headerHeight = 50, rowHeight = 50 }) => {
         ),
     );
 
-    return loadingWorkflows ? (
-        <CircularProgress />
-    ) : workflows.length < 1 ? (
-        <span>No workflow found.</span>
-    ) : (
+    if (loadingWorkflows) return <CircularProgress />;
+    if (!Array.isArray(workflows) || workflows.length < 1) {
+        return <span>No workflow found.</span>;
+    }
+    return (
         <React.Fragment>
             <Grid container spacing={3} className={classes.titleGridContainer}>
                 <Typography

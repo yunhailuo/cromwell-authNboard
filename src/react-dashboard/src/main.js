@@ -1,4 +1,3 @@
-import { LogInOut, PrivateRoute } from './auth';
 import { Route, Switch } from 'react-router-dom';
 import { SubmitWorkflow, Workflow, WorkflowTable } from './workflows';
 import ApiDoc from './swagger';
@@ -11,29 +10,26 @@ const Main = () => (
         {/* A <Switch> looks through its children <Route>s and
           renders the first one that matches the current URL. */}
         <Switch>
-            <Route exact path="/login">
-                <LogInOut />
-            </Route>
-            <PrivateRoute
+            <Route
                 path="/workflows/version/:uuid([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
                 exact
                 render={(props) => <Workflow {...props} />}
             />
-            <PrivateRoute path="/workflows/version/query" exact>
+            <Route path="/workflows/version/query" exact>
                 <WorkflowTable />
-            </PrivateRoute>
+            </Route>
             <Route path="/workflows/version" exact>
                 <SubmitWorkflow />
             </Route>
-            <PrivateRoute path="/womtool/version/describe" exact>
+            <Route path="/womtool/version/describe" exact>
                 <WomTool />
-            </PrivateRoute>
-            <PrivateRoute path="/swagger" exact>
+            </Route>
+            <Route path="/swagger" exact>
                 <ApiDoc />
-            </PrivateRoute>
-            <PrivateRoute path="/" exact>
+            </Route>
+            <Route path="/" exact>
                 <Home />
-            </PrivateRoute>
+            </Route>
         </Switch>
     </React.Fragment>
 );

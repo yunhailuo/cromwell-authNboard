@@ -101,8 +101,14 @@ const SubmitWorkflow = () => {
             method: 'POST',
             body: workflowData,
         })
-            .then((res) => res.json())
-            .then((res) => console.log(res));
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
+            .then((res) => console.log(res))
+            .catch((err) => console.error(err));
         for (var key of workflowData.entries()) {
             console.log(key[0] + ', ' + key[1]);
         }

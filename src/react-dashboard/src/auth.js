@@ -100,8 +100,10 @@ export const Auth0Provider = ({ children }) => {
         );
 
     const authorizedFetch = async (resource, init = {}) => {
-        const token = await getToken();
-        init.headers = { Authorization: `Bearer ${token}` };
+        if (isAuthenticated) {
+            const token = await getToken();
+            init.headers = { Authorization: `Bearer ${token}` };
+        }
 
         return fetch(resource, init);
     };

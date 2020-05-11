@@ -106,10 +106,14 @@ export const App = () => {
     useEffect(() => {
         if (isAuthenticated) {
             authorizedFetch('/engine/v1/version')
-                .then((res) => res.json())
-                .then((version) =>
-                    setApiVersion(`v${version.cromwell || '1'}`),
-                );
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error(res.statusText);
+                    }
+                    return res.json();
+                })
+                .then((version) => setApiVersion(`v${version.cromwell || '1'}`))
+                .catch((err) => console.error(err));
         }
     }, [isAuthenticated, authorizedFetch]);
 
@@ -161,12 +165,8 @@ export const App = () => {
 };
 
 const SideBar = ({ open = false }) => {
-    const { isAuthenticated } = useAuth0();
     const classes = useStyles();
 
-    if (!isAuthenticated) {
-        return <React.Fragment />;
-    }
     return (
         <Drawer
             variant="permanent"
