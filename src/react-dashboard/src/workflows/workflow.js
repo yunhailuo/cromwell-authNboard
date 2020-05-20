@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
+import CloseIcon from '@material-ui/icons/Close';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -10,12 +11,14 @@ import Divider from '@material-ui/core/Divider';
 import { ExecutionChart } from './execChart';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import Grid from '@material-ui/core/Grid';
+import IconButton from '@material-ui/core/IconButton';
 import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
+import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import { getTimeString } from '../utils';
 import { makeStyles } from '@material-ui/core/styles';
@@ -147,6 +150,272 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
 };
 AbortWorkflow.propTypes = {
     workflowId: PropTypes.string.isRequired,
+    setRefresh: PropTypes.func,
+};
+
+const updateKeyConflict = (labels, key) => {
+    const labelIds = [];
+    Object.keys(labels).forEach((id) => {
+        if (labels[id].key === key) {
+            labelIds.push(id);
+        }
+    });
+    labelIds.forEach((id) => {
+        labels[id].keyConflict = key && labelIds.length > 1;
+    });
+};
+
+const labelReducer = (labels, action) => {
+    const newLabels = {};
+    Object.keys(labels).forEach((id) => {
+        newLabels[id] = { ...labels[id] };
+    });
+    switch (action.type) {
+    case 'ADD':
+        newLabels[Math.max(...Object.keys(newLabels)) + 1] = {
+            key: action.key || '',
+            value: action.value || '',
+            readOnlyKey: false,
+            keyConflict: false,
+        };
+        if (action.key) updateKeyConflict(newLabels, action.key);
+        return newLabels;
+    case 'UPDATE_KEY':
+        newLabels[action.id].key = action.key;
+        updateKeyConflict(newLabels, labels[action.id].key);
+        updateKeyConflict(newLabels, action.key);
+        return newLabels;
+    case 'UPDATE_VALUE':
+        newLabels[action.id].value = action.value;
+        return newLabels;
+    case 'DELETE':
+        if (!newLabels[action.id]) {
+            console.error(`Label ${action.id} not in records!`);
+            return newLabels;
+        }
+        if (newLabels[action.id].readOnlyKey) {
+            console.error(`Label ${action.id} cannot be deleted!`);
+            return newLabels;
+        }
+        delete newLabels[action.id];
+        updateKeyConflict(newLabels, labels[action.id].key);
+        return newLabels;
+    default:
+        console.error(`Unknown label action ${action.type}!`);
+    }
+};
+
+const LabelManager = ({
+    workflowId,
+    currentLabels = {},
+    setRefresh = null,
+}) => {
+    const [managerOpen, setManagerOpen] = useState(false);
+    const [resultOpen, setResultOpen] = useState(false);
+    const [resultTitle, setResultTitle] = useState('Abort');
+    const [resultContent, setResultContent] = useState(<CircularProgress />);
+    const closeResult = (
+        <Button autoFocus onClick={() => setResultOpen(false)} color="primary">
+            Close
+        </Button>
+    );
+    const [resultAction, setResultAction] = useState(closeResult);
+
+    const initLabel = {};
+    Object.keys(currentLabels).forEach((key, i) => {
+        initLabel[i] = {
+            key: key,
+            value: currentLabels[key],
+            readOnlyKey: true,
+            keyConflict: false,
+        };
+    });
+    const [labelRoster, dispatchLabelRoster] = useReducer(
+        labelReducer,
+        initLabel,
+    );
+
+    const { apiVersion } = useApp();
+    const { authorizedFetch } = useAuth0();
+    const handleSubmit = () => {
+        setManagerOpen(false);
+        setResultOpen(true);
+        const updatedLabels = {};
+        Object.keys(labelRoster).forEach((id) => {
+            const key = labelRoster[id].key;
+            if (!key) return;
+            const value = labelRoster[id].value;
+            if (!currentLabels[key] || currentLabels[key] !== value) {
+                updatedLabels[key] = labelRoster[id].value;
+            }
+        });
+        authorizedFetch(`/api/workflows/${apiVersion}/${workflowId}/labels`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedLabels),
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    setResultTitle('Failed');
+                    setResultContent(
+                        `Failed to update labels: ${res.statusText}`,
+                    );
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
+            .then(() => {
+                setResultTitle('Succeeded');
+                setResultContent('Labels updated.');
+                setResultAction(
+                    <Button
+                        autoFocus
+                        onClick={() => {
+                            if (setRefresh) setRefresh(true);
+                            setResultOpen(false);
+                        }}
+                        color="primary"
+                    >
+                        Close
+                    </Button>,
+                );
+            })
+            .catch((err) => console.error(err));
+    };
+
+    const managerDialog = (
+        <Dialog onClose={() => setManagerOpen(false)} open={managerOpen}>
+            <DialogTitle>Add/Update labels</DialogTitle>
+            <DialogContent dividers>
+                <Box marginBottom={2}>
+                    <i>
+                        Notes: Labels are key-value pairs. While you can change
+                        the value of a key as much as you like, Cromwell
+                        doesn&apos;t allow label (key) deletion as for now.
+                        Please add label with cautious.
+                    </i>
+                </Box>
+                {Object.keys(labelRoster).map((id) => (
+                    <Grid container alignItems="center" spacing={2} key={id}>
+                        {labelRoster[id].readOnlyKey ? (
+                            <Grid item xs={3} component={Box} fontSize="1rem">
+                                {labelRoster[id].key}
+                            </Grid>
+                        ) : (
+                            <Grid
+                                item
+                                xs={3}
+                                component={TextField}
+                                variant="outlined"
+                                size="small"
+                                value={labelRoster[id].key}
+                                error={labelRoster[id].keyConflict}
+                                helperText={
+                                    labelRoster[id].keyConflict
+                                        ? 'Duplicated key'
+                                        : null
+                                }
+                                onChange={(event) =>
+                                    dispatchLabelRoster({
+                                        type: 'UPDATE_KEY',
+                                        id: id,
+                                        key: event.target.value,
+                                    })
+                                }
+                            />
+                        )}
+                        <Grid
+                            item
+                            xs={8}
+                            component={TextField}
+                            fullWidth
+                            variant="outlined"
+                            size="small"
+                            value={labelRoster[id].value}
+                            onChange={(event) =>
+                                dispatchLabelRoster({
+                                    type: 'UPDATE_VALUE',
+                                    id: id,
+                                    value: event.target.value,
+                                })
+                            }
+                        />
+                        {labelRoster[id].readOnlyKey ? null : (
+                            <Grid
+                                item
+                                xs={1}
+                                component={IconButton}
+                                onClick={() =>
+                                    dispatchLabelRoster({
+                                        type: 'DELETE',
+                                        id: id,
+                                    })
+                                }
+                            >
+                                <CloseIcon />
+                            </Grid>
+                        )}
+                    </Grid>
+                ))}
+                <Grid
+                    container
+                    alignItems="center"
+                    component={Box}
+                    marginTop={2}
+                >
+                    <Grid
+                        item
+                        xs={12}
+                        component={Button}
+                        variant="contained"
+                        onClick={() => dispatchLabelRoster({ type: 'ADD' })}
+                    >
+                        +
+                    </Grid>
+                </Grid>
+            </DialogContent>
+            <DialogActions>
+                <Button
+                    disabled={Object.keys(labelRoster).some(
+                        (id) => labelRoster[id].keyConflict,
+                    )}
+                    onClick={handleSubmit}
+                    color="primary"
+                >
+                    Submit
+                </Button>
+                <Button
+                    autoFocus
+                    onClick={() => setManagerOpen(false)}
+                    color="primary"
+                >
+                    Close
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+
+    const resultDialog = (
+        <Dialog onClose={() => setResultOpen(false)} open={resultOpen}>
+            <DialogTitle>{resultTitle}</DialogTitle>
+            <DialogContent dividers>{resultContent}</DialogContent>
+            <DialogActions>{resultAction}</DialogActions>
+        </Dialog>
+    );
+
+    return (
+        <React.Fragment>
+            <Button variant="contained" onClick={() => setManagerOpen(true)}>
+                Add/Update labels
+            </Button>
+            {managerDialog}
+            {resultDialog}
+        </React.Fragment>
+    );
+};
+LabelManager.propTypes = {
+    workflowId: PropTypes.string.isRequired,
+    currentLabels: PropTypes.objectOf(PropTypes.string),
     setRefresh: PropTypes.func,
 };
 
@@ -406,6 +675,13 @@ const Workflow = ({
                         />
                     </Grid>
                 ) : null}
+                <Grid item>
+                    <LabelManager
+                        workflowId={uuid}
+                        currentLabels={metadata.labels}
+                        setRefresh={setRefresh}
+                    />
+                </Grid>
             </Grid>
             {/* Basic info */}
             <Typography component="h4" variant="h6" color="secondary">

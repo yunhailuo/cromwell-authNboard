@@ -14,6 +14,7 @@ def get_workflows(subpath):
 
 @proxy.route('/api/workflows/<path:subpath>/abort', methods=['POST'])
 @proxy.route('/api/workflows/<path:subpath>/releaseHold', methods=['POST'])
+@proxy.route('/api/workflows/<path:subpath>/labels', methods=['PATCH'])
 @requires_auth(permissions=['update:workflows'])
 def abort_release_workflow(subpath):
     return proxy_request()
