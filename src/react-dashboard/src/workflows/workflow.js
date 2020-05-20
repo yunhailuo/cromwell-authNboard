@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import Box from '@material-ui/core/Box';
+import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import Divider from '@material-ui/core/Divider';
 import { ExecutionChart } from './execChart';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import Grid from '@material-ui/core/Grid';
 import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
 import Table from '@material-ui/core/Table';
@@ -17,6 +23,10 @@ import { useApp } from '../App';
 import { useAuth0 } from '../auth';
 
 const useStyles = makeStyles((theme) => ({
+    controlPanel: {
+        justifyContent: 'center',
+        paddingBottom: theme.spacing(2),
+    },
     subtitle: {
         marginTop: theme.spacing(2),
     },
@@ -25,6 +35,120 @@ const useStyles = makeStyles((theme) => ({
         top: 5,
     },
 }));
+
+const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
+    const action = 'abort';
+
+    const [actionOpen, setActionOpen] = useState(false);
+    const [resultOpen, setResultOpen] = useState(false);
+    const [resultTitle, setResultTitle] = useState('Abort');
+    const [resultContent, setResultContent] = useState(<CircularProgress />);
+    const closeResult = (
+        <Button autoFocus onClick={() => setResultOpen(false)} color="primary">
+            Close
+        </Button>
+    );
+    const [resultAction, setResultAction] = useState(closeResult);
+
+    const handleActionOpen = () => {
+        setActionOpen(true);
+        setResultOpen(false);
+        setResultTitle('Abort');
+        setResultContent(<CircularProgress />);
+        setResultAction(closeResult);
+    };
+
+    const { apiVersion } = useApp();
+    const { authorizedFetch } = useAuth0();
+    const handleAction = () => {
+        setActionOpen(false);
+        setResultOpen(true);
+        authorizedFetch(
+            `/api/workflows/${apiVersion}/${workflowId}/${action}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            },
+        )
+            .then((res) => {
+                if (!res.ok) {
+                    setResultTitle('Failed');
+                    setResultContent(
+                        `Failed to abort workflow ${workflowId}: ${res.statusText}`,
+                    );
+                    throw new Error(res.statusText);
+                }
+                return res.json();
+            })
+            .then((res) => {
+                setResultTitle('Succeeded');
+                setResultContent(
+                    `Successfully ${res.status} workflow ${res.id}`,
+                );
+                setResultAction(
+                    <Button
+                        autoFocus
+                        onClick={() => {
+                            setRefresh(true);
+                            setResultOpen(false);
+                        }}
+                        color="primary"
+                    >
+                        Close
+                    </Button>,
+                );
+            })
+            .catch((err) => console.error(err));
+    };
+
+    const actionDialog = (
+        <Dialog onClose={() => setActionOpen(false)} open={actionOpen}>
+            <DialogTitle>Abort</DialogTitle>
+            <DialogContent dividers>
+                Do you want to <strong>abort</strong> workflow {workflowId}?
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleAction} color="primary">
+                    Abort
+                </Button>
+                <Button
+                    autoFocus
+                    onClick={() => setActionOpen(false)}
+                    color="primary"
+                >
+                    Cancel
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+
+    const resultDialog = (
+        <Dialog onClose={() => setResultOpen(false)} open={resultOpen}>
+            <DialogTitle>{resultTitle}</DialogTitle>
+            <DialogContent dividers>{resultContent}</DialogContent>
+            <DialogActions>{resultAction}</DialogActions>
+        </Dialog>
+    );
+
+    return (
+        <React.Fragment>
+            <Button
+                color="secondary"
+                variant="contained"
+                onClick={handleActionOpen}
+            >
+                Abort
+            </Button>
+            {actionDialog}
+            {resultDialog}
+        </React.Fragment>
+    );
+};
+AbortWorkflow.propTypes = {
+    workflowId: PropTypes.string.isRequired,
+    setRefresh: PropTypes.func,
+};
 
 const SimpleObjectTable = ({ obj = {} }) =>
     obj && Object.keys(obj).length > 0 ? (
@@ -245,7 +369,9 @@ const Workflow = ({
     const [loadingMetadata, setLoadingMetadata] = useState(true);
     const [metadata, setMetadata] = useState();
     const [metadataDownloadUrl, setMetadataDownloadUrl] = useState();
+    const [refresh, setRefresh] = useState(false);
     useEffect(() => {
+        setRefresh(false);
         authorizedFetch(`/api/workflows/${apiVersion}/${uuid}/metadata`)
             .then((res) => {
                 if (!res.ok) {
@@ -265,12 +391,22 @@ const Workflow = ({
             })
             .catch((err) => console.error(err))
             .finally(() => setLoadingMetadata(false));
-    }, [authorizedFetch, apiVersion, uuid, setAppBarTitle]);
+    }, [authorizedFetch, apiVersion, uuid, setAppBarTitle, refresh]);
 
     return loadingMetadata ? (
         <CircularProgress />
     ) : !metadata ? null : (
         <React.Fragment>
+            <Grid container spacing={3} className={classes.controlPanel}>
+                {metadata.status === 'Running' ? (
+                    <Grid item>
+                        <AbortWorkflow
+                            workflowId={uuid}
+                            setRefresh={setRefresh}
+                        />
+                    </Grid>
+                ) : null}
+            </Grid>
             {/* Basic info */}
             <Typography component="h4" variant="h6" color="secondary">
                 <Box textAlign="left">

@@ -266,7 +266,7 @@ export const UserTile = () => {
 
 const GetApiToken = () => {
     const classes = useStyles();
-    const [open, setOpen] = React.useState(false);
+    const [open, setOpen] = useState(false);
     const [apiToken, setApiToken] = useState();
     const { getToken } = useAuth0();
 
