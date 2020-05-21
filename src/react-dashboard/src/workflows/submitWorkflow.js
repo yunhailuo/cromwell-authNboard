@@ -1,10 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Button from '@material-ui/core/Button';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Grid from '@material-ui/core/Grid';
+import { Link } from 'react-router-dom';
+import LinkStyle from '@material-ui/core/Link';
 import MenuItem from '@material-ui/core/MenuItem';
 import { SingleFileUpload } from '../utils';
+import Switch from '@material-ui/core/Switch';
 import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from '../App';
 import { useAuth0 } from '../auth';
@@ -15,10 +21,10 @@ const useStyles = makeStyles((theme) => ({
         width: '96%',
         alignItems: 'flex-end',
         justifyContent: 'center',
-        borderWidth: '30px 0 30px 0',
+        borderWidth: '10px 0 10px 0',
         borderStyle: 'solid',
         borderImage:
-            'repeating-linear-gradient(60deg, black, black 35px, #ff0 35px, #ff0 70px) 60',
+            'repeating-linear-gradient(60deg, black, black 35px, #ff0 35px, #ff0 70px) 45',
     },
     fileInputContainer: {
         display: 'flex',
@@ -42,20 +48,18 @@ const SubmitWorkflow = () => {
     const classes = useStyles();
     const { authorizedFetch } = useAuth0();
     const { apiVersion, setAppBarTitle } = useApp();
-    useEffect(
-        () => setAppBarTitle('Submit a Workflow (Construction in progress)'),
-        [setAppBarTitle],
-    );
+    useEffect(() => setAppBarTitle('Submit a Workflow (experimental)'), [
+        setAppBarTitle,
+    ]);
 
     // Parameters in form
     const [workflowType, setWorkflowType] = useState('WDL');
     const [workflowTypeVersion, setWorkflowTypeVersion] = useState(
         workflowTypeVersionMap[workflowType][0],
     );
+    const [workflowOnHold, setWorkflowOnHold] = useState(false);
+    const [workflowRoot, setWorkflowRoot] = useState('');
     const [workflowUrl, setWorkflowUrl] = useState('');
-    const workflowSourceRef = useRef();
-    const workflowInputRef = useRef();
-
     // Form handlers
     const handleInputChange = (event) => {
         const target = event.target;
@@ -66,6 +70,12 @@ const SubmitWorkflow = () => {
         case 'workflowTypeVersion':
             setWorkflowTypeVersion(target.value);
             break;
+        case 'workflowOnHold':
+            setWorkflowOnHold(!workflowOnHold);
+            break;
+        case 'workflowRoot':
+            setWorkflowRoot(target.value);
+            break;
         case 'workflowUrl':
             setWorkflowUrl(target.value);
             break;
@@ -73,18 +83,46 @@ const SubmitWorkflow = () => {
             console.log(event);
         }
     };
+
+    // File input references
+    const workflowSourceRef = useRef();
+    const workflowInputRef = useRef();
+    const workflowOptionsRef = useRef();
+    const workflowLabelsRef = useRef();
+    const workflowDependenciesRef = useRef();
+
+    const [submitting, setSubmitting] = useState(false);
+    const [submissionResult, setSubmissionResult] = useState();
     const resetSubmissionForm = () => {
+        setWorkflowType('WDL');
+        setWorkflowTypeVersion(workflowTypeVersionMap[workflowType][0]);
+        setWorkflowOnHold(false);
+        setWorkflowRoot('');
+        setWorkflowUrl('');
         workflowSourceRef.current.reset();
         workflowInputRef.current.reset();
+        workflowOptionsRef.current.reset();
+        workflowLabelsRef.current.reset();
+        workflowDependenciesRef.current.reset();
+        setSubmitting(false);
+        setSubmissionResult();
     };
     const submitWorkflow = (event) => {
         event.preventDefault();
+        setSubmitting(true);
+
         const workflowData = new FormData();
         workflowData.append('workflowType', workflowType);
         workflowData.append('workflowTypeVersion', workflowTypeVersion);
+        workflowData.append('workflowOnHold', workflowOnHold);
+        if (workflowType === 'CWL') {
+            workflowData.append('workflowRoot', workflowRoot);
+        }
         if (workflowUrl) {
             workflowData.append('workflowUrl', workflowUrl);
         }
+
+        // File inputs
         if (workflowSourceRef.current.files.length > 0) {
             workflowData.append(
                 'workflowSource',
@@ -97,7 +135,23 @@ const SubmitWorkflow = () => {
                 workflowInputRef.current.files[0],
             );
         }
-        authorizedFetch(`/api/workflows/${apiVersion}/backends`, {
+        if (workflowOptionsRef.current.files.length > 0) {
+            workflowData.append(
+                'workflowOptions',
+                workflowOptionsRef.current.files[0],
+            );
+        }
+        if (workflowLabelsRef.current.files.length > 0) {
+            workflowData.append('labels', workflowLabelsRef.current.files[0]);
+        }
+        if (workflowDependenciesRef.current.files.length > 0) {
+            workflowData.append(
+                'workflowDependencies',
+                workflowDependenciesRef.current.files[0],
+            );
+        }
+
+        authorizedFetch(`/api/workflows/${apiVersion}`, {
             method: 'POST',
             body: workflowData,
         })
@@ -107,11 +161,21 @@ const SubmitWorkflow = () => {
                 }
                 return res.json();
             })
-            .then((res) => console.log(res))
+            .then((res) => {
+                setSubmissionResult(
+                    <Typography component="h5">
+                        <span>Submitted successfully: </span>
+                        <LinkStyle
+                            component={Link}
+                            to={`/workflows/version/${res.id}`}
+                        >
+                            {res.id}
+                        </LinkStyle>
+                        <span>{` (${res.status})`}</span>
+                    </Typography>,
+                );
+            })
             .catch((err) => console.error(err));
-        for (var key of workflowData.entries()) {
-            console.log(key[0] + ', ' + key[1]);
-        }
     };
 
     return (
@@ -126,7 +190,12 @@ const SubmitWorkflow = () => {
                 onSubmit={submitWorkflow}
                 onReset={resetSubmissionForm}
             >
-                <Grid item xs={12} md={2} component={FormControl}>
+                <Grid
+                    item
+                    xs={12}
+                    md={workflowType === 'CWL' ? 3 : 4}
+                    component={FormControl}
+                >
                     <TextField
                         select
                         name="workflowType"
@@ -141,7 +210,12 @@ const SubmitWorkflow = () => {
                         ))}
                     </TextField>
                 </Grid>
-                <Grid item xs={12} md={2} component={FormControl}>
+                <Grid
+                    item
+                    xs={12}
+                    md={workflowType === 'CWL' ? 3 : 4}
+                    component={FormControl}
+                >
                     <TextField
                         select
                         name="workflowTypeVersion"
@@ -156,7 +230,39 @@ const SubmitWorkflow = () => {
                         ))}
                     </TextField>
                 </Grid>
-                <Grid item xs={12} md={8} component={FormControl}>
+                <Grid
+                    item
+                    xs={12}
+                    md={workflowType === 'CWL' ? 3 : 4}
+                    component={FormControl}
+                >
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={workflowOnHold}
+                                onChange={handleInputChange}
+                                name="workflowOnHold"
+                            />
+                        }
+                        label="On hold"
+                        labelPlacement="top"
+                    />
+                </Grid>
+                {workflowType === 'CWL' ? (
+                    <Grid item xs={12} md={3} component={FormControl}>
+                        <TextField
+                            name="workflowRoot"
+                            label="Workflow Root"
+                            InputLabelProps={{
+                                disableAnimation: true,
+                                shrink: true,
+                            }}
+                            value={workflowRoot}
+                            onChange={handleInputChange}
+                        />
+                    </Grid>
+                ) : null}
+                <Grid item xs={12} md={6} component={FormControl}>
                     <TextField
                         name="workflowUrl"
                         label="Workflow definition URL"
@@ -170,7 +276,7 @@ const SubmitWorkflow = () => {
                         onChange={handleInputChange}
                     />
                 </Grid>
-                <Grid item xs={12} md={5} component={FormControl}>
+                <Grid item xs={12} md={6} component={FormControl}>
                     <TextField
                         label="Workflow definition (.wdl)"
                         InputLabelProps={{
@@ -180,11 +286,12 @@ const SubmitWorkflow = () => {
                         InputProps={{
                             className: classes.fileInputContainer,
                             inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.wdl' },
                             inputRef: workflowSourceRef,
                         }}
                     />
                 </Grid>
-                <Grid item xs={12} md={5} component={FormControl}>
+                <Grid item xs={12} md={6} component={FormControl}>
                     <TextField
                         label="Input definition (.json)"
                         InputLabelProps={{
@@ -194,7 +301,53 @@ const SubmitWorkflow = () => {
                         InputProps={{
                             className: classes.fileInputContainer,
                             inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.json' },
                             inputRef: workflowInputRef,
+                        }}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6} component={FormControl}>
+                    <TextField
+                        label="Labels (.json)"
+                        InputLabelProps={{
+                            disableAnimation: true,
+                            shrink: true,
+                        }}
+                        InputProps={{
+                            className: classes.fileInputContainer,
+                            inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.json' },
+                            inputRef: workflowLabelsRef,
+                        }}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6} component={FormControl}>
+                    <TextField
+                        label="Options (.json)"
+                        InputLabelProps={{
+                            disableAnimation: true,
+                            shrink: true,
+                        }}
+                        InputProps={{
+                            className: classes.fileInputContainer,
+                            inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.json' },
+                            inputRef: workflowOptionsRef,
+                        }}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6} component={FormControl}>
+                    <TextField
+                        label="Dependencies (.zip)"
+                        InputLabelProps={{
+                            disableAnimation: true,
+                            shrink: true,
+                        }}
+                        InputProps={{
+                            className: classes.fileInputContainer,
+                            inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.zip' },
+                            inputRef: workflowDependenciesRef,
                         }}
                     />
                 </Grid>
@@ -209,6 +362,11 @@ const SubmitWorkflow = () => {
                     </Button>
                 </Grid>
             </Grid>
+            {submissionResult ? (
+                <div>{submissionResult}</div>
+            ) : submitting ? (
+                <CircularProgress />
+            ) : null}
         </React.Fragment>
     );
 };
