@@ -1,13 +1,17 @@
-from flask import Blueprint, request, Response, current_app
+import json
+
+from flask import Blueprint, request, Response
 import requests
 
 from auth import requires_auth
 
 proxy = Blueprint('proxy', __name__,)
+with open('instance/proxy_config.json') as f:
+    app_config = json.load(f)
 
 
 @proxy.route('/api/workflows/<path:subpath>', methods=['GET'])
-@requires_auth(permissions=['read:workflows'])
+@requires_auth(permissions=[app_config['READ_PERMISSION']])
 def get_workflows(subpath):
     return proxy_request()
 
@@ -15,14 +19,14 @@ def get_workflows(subpath):
 @proxy.route('/api/workflows/<path:subpath>/abort', methods=['POST'])
 @proxy.route('/api/workflows/<path:subpath>/releaseHold', methods=['POST'])
 @proxy.route('/api/workflows/<path:subpath>/labels', methods=['PATCH'])
-@requires_auth(permissions=['update:workflows'])
+@requires_auth(permissions=[app_config['UPDATE_PERMISSION']])
 def abort_release_workflow(subpath):
     return proxy_request()
 
 
 @proxy.route('/api/workflows/<path:subpath>', methods=['POST'])
 @requires_auth(
-    permissions=['create:workflows', 'update:workflows']
+    permissions=[app_config['CREATE_PERMISSION']]
 )
 def post_workflows(subpath):
     return proxy_request('api/workflows/{}'.format(subpath.lstrip('/')))
@@ -30,14 +34,14 @@ def post_workflows(subpath):
 
 @proxy.route('/api/womtool/<path:subpath>', methods=['POST'])
 @requires_auth(
-    permissions=['read:workflows', 'create:workflows', 'update:workflows']
+    permissions=[app_config['READ_PERMISSION']]
 )
 def womtool(subpath):
     return proxy_request()
 
 
 @proxy.route('/engine/<path:subpath>', methods=['GET'])
-@requires_auth(permissions=['read:workflows'])
+@requires_auth
 def engine(subpath):
     return proxy_request()
 
@@ -54,7 +58,7 @@ def proxy_request(path=None):
     response = requests.request(
         request.method,
         '{}/{}'.format(
-            current_app.config['CROMWELL_SERVER'].rstrip('/'),
+            app_config['CROMWELL_SERVER'].rstrip('/'),
             path.lstrip('/')
         ),
         params=request.args,
