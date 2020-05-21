@@ -472,7 +472,8 @@ const BasicMetadataTable = (metadata) => {
                 }
                 const memorySize = (
                     callShard.runtimeAttributes.memory ||
-                    callShard.runtimeAttributes.memoryMin
+                    callShard.runtimeAttributes.memoryMin ||
+                    'null'
                 ).replace(' GB', '');
                 if (isNaN(memorySize)) {
                     memoryError.push(
