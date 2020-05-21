@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useState } from 'react';
-import { SimpleObjectTable, getTimeString } from '../utils';
+import { SimpleObjectTable, camelize, getTimeString } from '../utils';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -35,12 +35,10 @@ const useStyles = makeStyles((theme) => ({
     },
 }));
 
-const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
-    const action = 'abort';
-
+const WorkflowStatusSwitch = ({ action, workflowId, setRefresh = null }) => {
     const [actionOpen, setActionOpen] = useState(false);
     const [resultOpen, setResultOpen] = useState(false);
-    const [resultTitle, setResultTitle] = useState('Abort');
+    const [resultTitle, setResultTitle] = useState(action.toUpperCase());
     const [resultContent, setResultContent] = useState(<CircularProgress />);
     const closeResult = (
         <Button autoFocus onClick={() => setResultOpen(false)} color="primary">
@@ -52,7 +50,7 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
     const handleActionOpen = () => {
         setActionOpen(true);
         setResultOpen(false);
-        setResultTitle('Abort');
+        setResultTitle(action.toUpperCase());
         setResultContent(<CircularProgress />);
         setResultAction(closeResult);
     };
@@ -63,7 +61,7 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
         setActionOpen(false);
         setResultOpen(true);
         authorizedFetch(
-            `/api/workflows/${apiVersion}/${workflowId}/${action}`,
+            `/api/workflows/${apiVersion}/${workflowId}/${camelize(action)}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,7 +72,7 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
                 if (!res.ok) {
                     setResultTitle('Failed');
                     setResultContent(
-                        `Failed to abort workflow ${workflowId}: ${res.statusText}`,
+                        `Failed to ${action} workflow ${workflowId}: ${res.statusText}`,
                     );
                     throw new Error(res.statusText);
                 }
@@ -103,13 +101,13 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
 
     const actionDialog = (
         <Dialog onClose={() => setActionOpen(false)} open={actionOpen}>
-            <DialogTitle>Abort</DialogTitle>
+            <DialogTitle>{action.toUpperCase()}</DialogTitle>
             <DialogContent dividers>
-                Do you want to <strong>abort</strong> workflow {workflowId}?
+                Do you want to <strong>{action}</strong> workflow {workflowId}?
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleAction} color="primary">
-                    Abort
+                    {action.toUpperCase()}
                 </Button>
                 <Button
                     autoFocus
@@ -137,14 +135,15 @@ const AbortWorkflow = ({ workflowId, setRefresh = null }) => {
                 variant="contained"
                 onClick={handleActionOpen}
             >
-                Abort
+                {action.toUpperCase()}
             </Button>
             {actionDialog}
             {resultDialog}
         </React.Fragment>
     );
 };
-AbortWorkflow.propTypes = {
+WorkflowStatusSwitch.propTypes = {
+    action: PropTypes.string.isRequired,
     workflowId: PropTypes.string.isRequired,
     setRefresh: PropTypes.func,
 };
@@ -615,9 +614,20 @@ const Workflow = ({
     ) : !metadata ? null : (
         <React.Fragment>
             <Grid container spacing={3} className={classes.controlPanel}>
-                {metadata.status === 'Running' ? (
+                {metadata.status === 'Running' ||
+                metadata.status === 'Submitted' ? (
+                        <Grid item>
+                            <WorkflowStatusSwitch
+                                action="abort"
+                                workflowId={uuid}
+                                setRefresh={setRefresh}
+                            />
+                        </Grid>
+                    ) : null}
+                {metadata.status === 'On Hold' ? (
                     <Grid item>
-                        <AbortWorkflow
+                        <WorkflowStatusSwitch
+                            action="release hold"
                             workflowId={uuid}
                             setRefresh={setRefresh}
                         />
