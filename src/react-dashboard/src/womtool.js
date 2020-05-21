@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { SimpleObjectTable, SingleFileUpload } from './utils';
+import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import FormControl from '@material-ui/core/FormControl';
+import GetAppIcon from '@material-ui/icons/GetApp';
 import Grid from '@material-ui/core/Grid';
+import LinkStyle from '@material-ui/core/Link';
 import MenuItem from '@material-ui/core/MenuItem';
-import { SingleFileUpload } from './utils';
 import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from './App';
 import { useAuth0 } from './auth';
@@ -26,6 +30,10 @@ const useStyles = makeStyles((theme) => ({
     },
     fileInput: {
         display: 'none',
+    },
+    alignedIcon: {
+        position: 'relative',
+        top: 5,
     },
 }));
 
@@ -51,7 +59,8 @@ const WomTool = () => {
     const workflowSourceRef = useRef();
     const workflowInputRef = useRef();
     const [womRequested, setWomRequested] = useState(false);
-    const [womResult, setWomResult] = useState();
+    const [womResultSummary, setWomResultSummary] = useState();
+    const [womResultDownloadUrl, setWomResultDownloadUrl] = useState();
 
     // Form handlers
     const handleInputChange = (event) => {
@@ -77,11 +86,13 @@ const WomTool = () => {
         workflowSourceRef.current && workflowSourceRef.current.reset();
         workflowInputRef.current && workflowInputRef.current.reset();
         setWomRequested(false);
-        setWomResult();
+        setWomResultSummary();
+        setWomResultDownloadUrl();
     };
+
     const submitWom = (event) => {
         event.preventDefault();
-        setWomResult();
+        setWomResultSummary();
         setWomRequested(true);
         const womFormData = new FormData();
         womFormData.append('workflowType', workflowType);
@@ -107,12 +118,29 @@ const WomTool = () => {
         })
             .then((res) => {
                 if (!res.ok) {
-                    setWomResult(res.statusText);
+                    setWomResultSummary({ Failed: res.statusText });
                     throw new Error(res.statusText);
                 }
                 return res.json();
             })
-            .then((res) => setWomResult(JSON.stringify(res)))
+            .then((res) => {
+                const downloadUrl = URL.createObjectURL(
+                    new Blob([JSON.stringify(res)], {
+                        type: 'application/json',
+                    }),
+                );
+                setWomResultDownloadUrl(downloadUrl);
+                const summary = {};
+                Object.keys(res).forEach((k) => {
+                    if (
+                        typeof res[k] === 'string' ||
+                        typeof res[k] === 'boolean'
+                    ) {
+                        summary[k] = res[k].toString();
+                    }
+                });
+                setWomResultSummary(summary);
+            })
             .catch((err) => console.error(err));
     };
 
@@ -181,6 +209,7 @@ const WomTool = () => {
                         InputProps={{
                             className: classes.fileInputContainer,
                             inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.wdl' },
                             inputRef: workflowSourceRef,
                         }}
                     />
@@ -195,6 +224,7 @@ const WomTool = () => {
                         InputProps={{
                             className: classes.fileInputContainer,
                             inputComponent: SingleFileUpload,
+                            inputProps: { accept: '.json' },
                             inputRef: workflowInputRef,
                         }}
                     />
@@ -210,8 +240,25 @@ const WomTool = () => {
                     </Button>
                 </Grid>
             </Grid>
-            {womResult ? (
-                <div>{womResult}</div>
+            {womResultSummary || womResultDownloadUrl ? (
+                <div>
+                    <Typography component="h4" variant="h6" color="secondary">
+                        <Box textAlign="left">
+                            <span>WOM Result</span>
+                            {womResultDownloadUrl ? (
+                                <LinkStyle
+                                    download="wom_result.json"
+                                    href={womResultDownloadUrl}
+                                >
+                                    <GetAppIcon
+                                        className={classes.alignedIcon}
+                                    />
+                                </LinkStyle>
+                            ) : null}
+                        </Box>
+                    </Typography>
+                    <SimpleObjectTable obj={womResultSummary} />
+                </div>
             ) : womRequested ? (
                 <CircularProgress />
             ) : null}

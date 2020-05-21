@@ -1,4 +1,5 @@
 import React, { useEffect, useReducer, useState } from 'react';
+import { SimpleObjectTable, getTimeString } from '../utils';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -14,13 +15,8 @@ import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
 import LinkStyle from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import { getTimeString } from '../utils';
 import { makeStyles } from '@material-ui/core/styles';
 import { useApp } from '../App';
 import { useAuth0 } from '../auth';
@@ -417,55 +413,6 @@ LabelManager.propTypes = {
     workflowId: PropTypes.string.isRequired,
     currentLabels: PropTypes.objectOf(PropTypes.string),
     setRefresh: PropTypes.func,
-};
-
-const SimpleObjectTable = ({ obj = {} }) =>
-    obj && Object.keys(obj).length > 0 ? (
-        <Table size="small">
-            <TableBody>
-                {Object.keys(obj)
-                    .filter((k) => obj[k] && obj[k].length > 0)
-                    .sort()
-                    .map((k) =>
-                        Array.isArray(obj[k]) ? (
-                            obj[k].map((element, index) => (
-                                <TableRow key={index}>
-                                    {index === 0 ? (
-                                        <TableCell
-                                            component="th"
-                                            scope="row"
-                                            rowSpan={obj[k].length}
-                                        >
-                                            <strong>{k}:</strong>
-                                        </TableCell>
-                                    ) : null}
-                                    <TableCell>{element}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow key={k}>
-                                <TableCell component="th" scope="row">
-                                    <strong>{k}:</strong>
-                                </TableCell>
-                                <TableCell>{obj[k]}</TableCell>
-                            </TableRow>
-                        ),
-                    )}
-            </TableBody>
-        </Table>
-    ) : (
-        <Table size="small">
-            <TableBody>
-                <TableRow>
-                    <TableCell component="th" scope="row" colSpan={2}>
-                        N/A
-                    </TableCell>
-                </TableRow>
-            </TableBody>
-        </Table>
-    );
-SimpleObjectTable.propTypes = {
-    obj: PropTypes.object,
 };
 
 const BasicMetadataTable = (metadata) => {

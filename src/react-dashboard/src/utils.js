@@ -2,6 +2,10 @@ import React, { useImperativeHandle, useRef, useState } from 'react';
 import Button from '@material-ui/core/Button';
 import PropTypes from 'prop-types';
 import { SortDirection } from 'react-virtualized';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableRow from '@material-ui/core/TableRow';
 import { makeStyles } from '@material-ui/core/styles';
 import { refType } from '@material-ui/utils';
 
@@ -84,4 +88,53 @@ export const arrayEqual = (array1, array2) => {
         array1.length === array2.length &&
         sortedArray1.every((value, index) => value === sortedArray2[index])
     );
+};
+
+export const SimpleObjectTable = ({ obj = {} }) =>
+    obj && Object.keys(obj).length > 0 ? (
+        <Table size="small">
+            <TableBody>
+                {Object.keys(obj)
+                    .filter((k) => obj[k] && obj[k].length > 0)
+                    .sort()
+                    .map((k) =>
+                        Array.isArray(obj[k]) ? (
+                            obj[k].map((element, index) => (
+                                <TableRow key={index}>
+                                    {index === 0 ? (
+                                        <TableCell
+                                            component="th"
+                                            scope="row"
+                                            rowSpan={obj[k].length}
+                                        >
+                                            <strong>{k}:</strong>
+                                        </TableCell>
+                                    ) : null}
+                                    <TableCell>{element}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow key={k}>
+                                <TableCell component="th" scope="row">
+                                    <strong>{k}:</strong>
+                                </TableCell>
+                                <TableCell>{obj[k]}</TableCell>
+                            </TableRow>
+                        ),
+                    )}
+            </TableBody>
+        </Table>
+    ) : (
+        <Table size="small">
+            <TableBody>
+                <TableRow>
+                    <TableCell component="th" scope="row" colSpan={2}>
+                        N/A
+                    </TableCell>
+                </TableRow>
+            </TableBody>
+        </Table>
+    );
+SimpleObjectTable.propTypes = {
+    obj: PropTypes.object,
 };
